@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimic-hdmi"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = ["active_adaptation", "mimic-lite", "any4hdmi"]
+
+[project.entry-points."active_adaptation.projects"]
+hdmi = "hdmi"
+
+[tool.setuptools.packages]
+find = { where = ["."], include = ["hdmi*"] }
+
+[tool.setuptools.package-data]
+"*" = ["**/*"]

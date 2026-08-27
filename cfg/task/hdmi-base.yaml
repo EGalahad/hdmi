@@ -1,0 +1,37 @@
+# @package task
+defaults:
+  - tracking-base
+  - _self_
+
+name: G1TrackHDMI
+project: hdmi
+
+objects:
+  object:
+    _target_: ???
+
+command:
+  _target_: hdmi.RobotObjectTracking
+  object_name: object
+  object_root_body_name: ???
+  object_tracking_body_names: ???
+  object_tracking_joint_names: []
+
+reward:
+  object_tracking:
+    body_pos:
+      _target_: mimic_lite.body_pos_exp
+      body_names: ${task.command.object_tracking_body_names}
+      weight: 1.0
+      sigma: 0.5
+    body_ori:
+      _target_: mimic_lite.body_ori_exp
+      body_names: ${task.command.object_tracking_body_names}
+      weight: 1.0
+      sigma: 0.5
+    joint_pos:
+      _target_: mimic_lite.joint_pos_tracking_product
+      joint_names: ${task.command.object_tracking_joint_names}
+      weight: 1.0
+      sigma: 0.5
+      enabled: false
