@@ -4,6 +4,7 @@ from typing import List
 
 import torch
 
+from active_adaptation.envs.utils import find_bodies, find_joints
 from active_adaptation.utils.string import resolve_matching_names
 from mimic_lite.tasks.command import RobotTracking
 
@@ -49,11 +50,10 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         )
 
     def _initialize(self, env) -> None:
-        super()._initialize(env)
         self.object = env.scene[self.object_name]
-
-        self.robot_tracking_body_names = list(self.tracking_body_names)
-        self.robot_tracking_joint_names = list(self.tracking_joint_names)
+        robot = env.scene.articulations["robot"]
+        _, robot_body_names = find_bodies(robot, self._tracking_body_names_cfg)
+        _, robot_joint_names = find_joints(robot, self._tracking_joint_names_cfg)
         object_body_ids, object_body_names = _resolve_unique(
             self._object_tracking_body_names_cfg,
             list(self.object.body_names),
@@ -68,13 +68,45 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
                 label="object joint",
             )
 
-        duplicate_bodies = set(self.robot_tracking_body_names) & set(object_body_names)
-        duplicate_joints = set(self.robot_tracking_joint_names) & set(object_joint_names)
+        if self.object_root_body_name not in self.object.body_names:
+            raise ValueError(
+                f"Object root body {self.object_root_body_name!r} is missing from "
+                f"runtime object bodies {list(self.object.body_names)}"
+            )
+
+        duplicate_bodies = set(robot_body_names) & set(object_body_names)
+        duplicate_joints = set(robot_joint_names) & set(object_joint_names)
         if duplicate_bodies or duplicate_joints:
             raise ValueError(
                 "Robot/object logical tracking names must be disjoint; "
                 f"duplicate bodies={sorted(duplicate_bodies)}, "
                 f"duplicate joints={sorted(duplicate_joints)}"
+            )
+
+        self._extra_motion_body_names = list(
+            dict.fromkeys([*object_body_names, self.object_root_body_name])
+        )
+        self._extra_motion_joint_names = list(object_joint_names)
+        super()._initialize(env)
+
+        if self.tracking_body_names != list(robot_body_names):
+            raise RuntimeError("Robot tracking body order changed during initialization")
+        if self.tracking_joint_names != list(robot_joint_names):
+            raise RuntimeError("Robot tracking joint order changed during initialization")
+
+        self.robot_tracking_body_names = list(self.tracking_body_names)
+        self.robot_tracking_joint_names = list(self.tracking_joint_names)
+        missing_reference_bodies = sorted(
+            set([*object_body_names, self.object_root_body_name])
+            - set(self.dataset.body_names)
+        )
+        missing_reference_joints = sorted(
+            set(object_joint_names) - set(self.dataset.joint_names)
+        )
+        if missing_reference_bodies or missing_reference_joints:
+            raise ValueError(
+                "Combined reference is missing configured object names; "
+                f"bodies={missing_reference_bodies}, joints={missing_reference_joints}"
             )
 
         self.object_tracking_body_names = object_body_names
