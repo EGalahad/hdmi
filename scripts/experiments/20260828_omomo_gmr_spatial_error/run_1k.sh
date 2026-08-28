@@ -2,7 +2,7 @@
 set -euo pipefail
 
 AA_ROOT=/home/elijah/Documents/projects/simple-tracking/active-adaptation
-RUN_ROOT=/data/elijah/hdmi-omomo-gmr-spatial-error-300
+RUN_ROOT=/data/elijah/hdmi-omomo-gmr-spatial-error-1k
 mkdir -p "$RUN_ROOT"/{hydra,logs,tmp,wandb,torchinductor,warp,motion_cache}
 exec > >(tee -a "$RUN_ROOT/logs/train.log") 2>&1
 
@@ -33,8 +33,8 @@ bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   +algo/ppo/module=large \
   task.num_envs=8192 \
   seed=0 \
-  total_iters=300 \
-  checkpoint_interval=150 \
-  upload_interval=150 \
+  total_iters=1000 \
+  checkpoint_interval=250 \
+  upload_interval=250 \
   wandb.mode=online \
   hydra.run.dir="$RUN_ROOT/hydra"
