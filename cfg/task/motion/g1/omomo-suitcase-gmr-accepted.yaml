@@ -1,0 +1,7 @@
+# @package task.command
+
+motion_cfgs:
+  omomo_suitcase_gmr_accepted:
+    path: ../any4hdmi/output/g1/omomo_suitcase_gmr_accepted
+    weight: 1.0
+    full_motion: true
