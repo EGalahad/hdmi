@@ -1,9 +1,4 @@
 # @package task
-defaults:
-  - /task/hdmi-base
-  - _self_
-
-name: G1TrackSuitcase
 
 objects:
   object:
