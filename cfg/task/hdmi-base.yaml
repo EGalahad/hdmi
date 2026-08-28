@@ -24,8 +24,8 @@ observation:
     object_pose_local:
       _target_: hdmi.object_pose_local
   command:
-    object_spatial_motion_local:
-      _target_: hdmi.object_spatial_motion_local
+    body_spatial_motion_local:
+      _target_: mimic_lite.body_spatial_motion_local
   command_short:
     ref_root_pos_future_local:
       future_steps: ${task.command.future_steps}
@@ -33,10 +33,6 @@ observation:
       future_steps: ${task.command.future_steps}
     ref_joint_pos_future:
       future_steps: ${task.command.future_steps}
-  priv:
-    object_pose_error_local:
-      _target_: hdmi.object_pose_error_local
-
 reward:
   object_tracking:
     body_pos:
