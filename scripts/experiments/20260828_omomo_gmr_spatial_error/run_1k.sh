@@ -2,7 +2,9 @@
 set -euo pipefail
 
 AA_ROOT=/home/elijah/Documents/projects/simple-tracking/active-adaptation
-RUN_ROOT=/data/elijah/hdmi-omomo-gmr-spatial-error-1k
+RUN_ROOT=${RUN_ROOT:-/data/elijah/hdmi-omomo-gmr-spatial-error-1k}
+TASK_OBJECT=${TASK_OBJECT:-suitcase}
+TASK_MOTION=${TASK_MOTION:-g1/omomo-suitcase-gmr-accepted}
 mkdir -p "$RUN_ROOT"/{hydra,logs,tmp,wandb,torchinductor,warp,motion_cache}
 exec > >(tee -a "$RUN_ROOT/logs/train.log") 2>&1
 
@@ -28,8 +30,8 @@ export UV_BIN=/home/elijah/.local/bin/uv
 bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   projects/mimic-lite/scripts/train.py venv/mjlab \
   task=hdmi-base \
-  task/object=suitcase \
-  task/motion=g1/omomo-suitcase-gmr-accepted \
+  task/object="$TASK_OBJECT" \
+  task/motion="$TASK_MOTION" \
   +algo/ppo/module=large \
   task.num_envs=8192 \
   seed=0 \
