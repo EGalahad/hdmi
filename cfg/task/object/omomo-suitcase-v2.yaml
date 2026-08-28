@@ -1,0 +1,15 @@
+# @package task
+
+objects:
+  object:
+    _target_: hdmi_suitcase_mesh
+    dataset_root: ../any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted
+    name: object
+    mass: 2.0
+    rgba: [0.4, 0.3, 0.2, 1.0]
+
+command:
+  object_name: object
+  object_root_body_name: object
+  object_tracking_body_names: [object]
+  object_tracking_joint_names: []
