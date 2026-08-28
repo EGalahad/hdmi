@@ -2,9 +2,9 @@
 
 objects:
   object:
-    _target_: box
+    _target_: hdmi_suitcase_mesh
+    dataset_root: ../any4hdmi/output/g1/omomo_suitcase_gmr_accepted
     name: object
-    size: [0.2, 0.3, 0.4]
     mass: 2.0
     rgba: [0.4, 0.3, 0.2, 1.0]
 
