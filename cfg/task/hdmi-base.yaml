@@ -29,9 +29,3 @@ reward:
       body_names: ${task.command.object_tracking_body_names}
       weight: 1.0
       sigma: 0.5
-    joint_pos:
-      _target_: mimic_lite.joint_pos_tracking_product
-      joint_names: ${task.command.object_tracking_joint_names}
-      weight: 1.0
-      sigma: 0.5
-      enabled: false

@@ -1,0 +1,7 @@
+# @package task.command
+
+motion_cfgs:
+  suitcase:
+    path: ../any4hdmi/output/g1/hdmi_suitcase
+    weight: 1.0
+    full_motion: true
