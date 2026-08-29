@@ -4,7 +4,7 @@ set -euo pipefail
 AA_ROOT=/home/elijah/Documents/projects/simple-tracking/active-adaptation
 RUN_ROOT=${RUN_ROOT:-/data/elijah/hdmi-omomo-gmr-spatial-error-1k}
 TASK=${TASK:-hdmi-base}
-TASK_OBJECT=${TASK_OBJECT:-suitcase}
+TASK_OBJECT=${TASK_OBJECT-suitcase}
 TASK_MOTION=${TASK_MOTION:-g1/omomo-suitcase-gmr-accepted}
 COMMAND_OBSERVATION=${COMMAND_OBSERVATION:-}
 mkdir -p "$RUN_ROOT"/{hydra,logs,tmp,wandb,torchinductor,warp,motion_cache}
