@@ -1,0 +1,10 @@
+# @package task
+
+reward:
+  tracking:
+    root_pos:
+      _target_: mimic_lite.body_pos_exp
+
+termination:
+  root_pos_error:
+    is_timeout: false

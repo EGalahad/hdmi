@@ -49,12 +49,12 @@ reward:
 
 termination:
   object_pos_error:
-    _target_: cum_body_pos_error_local
+    _target_: cum_body_pos_error
     body_names: ${task.command.object_tracking_body_names}
-    min_steps: 25
+    min_steps: 5
     threshold: 0.5
   object_ori_error:
-    _target_: cum_body_ori_error_local
+    _target_: cum_body_ori_error
     body_names: ${task.command.object_tracking_body_names}
-    min_steps: 25
+    min_steps: 5
     threshold: 0.8
