@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import copy
 from typing import List
 
+import numpy as np
 import torch
+from mimic_lite.tasks.command import RobotTracking
 
 from active_adaptation.envs.utils import find_bodies, find_joints
 from active_adaptation.utils.string import resolve_matching_names
-from mimic_lite.tasks.command import RobotTracking
 
 
 def _resolve_unique(
@@ -39,6 +41,7 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self._object_tracking_body_names_cfg = list(object_tracking_body_names)
         self._object_tracking_joint_names_cfg = list(object_tracking_joint_names or ())
         self._hdmi_call_update = call_update
+        self._object_ghost_model = None
         extra_bodies = list(
             dict.fromkeys([*self._object_tracking_body_names_cfg, object_root_body_name])
         )
@@ -210,3 +213,66 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
                 self.obs_current_step_index,
             )
         super().update()
+
+    def debug_draw(self) -> None:
+        super().debug_draw()
+        if self.viz.mode != "ghost" or not hasattr(self, "future_ref_motion"):
+            return
+
+        sim = self.env.sim
+        viewer = getattr(sim, "viewer", None)
+        scene = getattr(viewer, "scene", None)
+        if scene is None:
+            return
+
+        if self._object_ghost_model is None:
+            self._object_ghost_model = copy.deepcopy(sim.mj_model)
+            object_body_ids = set(
+                np.asarray(self.object.indexing.body_ids.cpu().numpy()).reshape(-1)
+            )
+            for geom_id in range(self._object_ghost_model.ngeom):
+                body_id = int(self._object_ghost_model.geom_bodyid[geom_id])
+                group_id = int(self._object_ghost_model.geom_group[geom_id])
+                visible = (
+                    body_id in object_body_ids
+                    and group_id < len(scene.geom_groups_visible)
+                    and scene.geom_groups_visible[group_id]
+                )
+                if visible:
+                    self._object_ghost_model.geom_rgba[geom_id] = self.viz.ghost_color
+                else:
+                    self._object_ghost_model.geom_rgba[geom_id, 3] = 0.0
+
+        env_ids = (
+            range(self.num_envs)
+            if scene.show_all_envs or self.num_envs == 1
+            else [int(scene.env_idx)]
+        )
+        indexing = self.object.indexing
+        free_joint_q_adr = indexing.free_joint_q_adr.cpu().numpy()
+        joint_q_adr = indexing.joint_q_adr.cpu().numpy()
+        motion = self.future_ref_motion
+        time_index = self.obs_current_step_index
+        for env_idx in env_ids:
+            qpos = sim.data.qpos[env_idx].cpu().numpy().copy()
+            if free_joint_q_adr.size:
+                qpos[free_joint_q_adr[:3]] = (
+                    motion.body_pos_w[
+                        env_idx, time_index, self.object_root_body_idx_motion
+                    ].cpu().numpy()
+                    + self.env.scene.env_origins[env_idx].cpu().numpy()
+                )
+                qpos[free_joint_q_adr[3:7]] = motion.body_quat_w[
+                    env_idx, time_index, self.object_root_body_idx_motion
+                ].cpu().numpy()
+            if joint_q_adr.size:
+                qpos[joint_q_adr] = motion.joint_pos[
+                    env_idx,
+                    time_index,
+                    self.object_tracking_joint_indices_motion,
+                ].cpu().numpy()
+            scene.add_ghost_mesh(
+                qpos,
+                model=self._object_ghost_model,
+                label=f"object_env_{env_idx}",
+            )
