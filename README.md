@@ -46,11 +46,14 @@ export HF_TOKEN=<your_huggingface_token>
 ```
 
 Motion conversion and validation tools live in
-[`EGalahad/any4hdmi`](https://github.com/EGalahad/any4hdmi). The training
-example below expects the paired dataset at:
+[`EGalahad/any4hdmi`](https://github.com/EGalahad/any4hdmi). Download the
+[G1 OMOMO suitcase dataset](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-suitcase)
+to the path used by the included configs:
 
-```text
-any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted/
+```bash
+uv run --project venv/mjlab hf download elijahgalahad/any4hdmi-g1-omomo-suitcase \
+  --repo-type dataset \
+  --local-dir ../any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted
 ```
 
 ## Train
