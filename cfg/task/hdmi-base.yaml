@@ -27,13 +27,6 @@ observation:
     object_spatial_error_local:
       _target_: mimic_lite.body_spatial_error_local
       body_names: ${task.command.object_tracking_body_names}
-  command_short:
-    ref_root_pos_future_local:
-      future_steps: ${task.command.future_steps}
-    ref_root_ori_future_b:
-      future_steps: ${task.command.future_steps}
-    ref_joint_pos_future:
-      future_steps: ${task.command.future_steps}
 reward:
   object_tracking:
     body_pos:
