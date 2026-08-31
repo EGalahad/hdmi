@@ -7,17 +7,13 @@ release supports MjLab and a single rigid object per environment.
 ## Setup
 
 Clone the HDMI development branches of Active Adaptation and Mimic-Lite, then
-clone HDMI's `main`. Keep `any4hdmi` next to Active Adaptation:
+clone HDMI's `main`:
 
 ```bash
 git clone -b dev/hdmi https://github.com/Agent-3154/active-adaptation.git
 cd active-adaptation
 git clone -b dev/hdmi https://github.com/EGalahad/mimic-lite projects/mimic-lite
 git clone https://github.com/EGalahad/hdmi projects/hdmi
-
-cd ..
-git clone https://github.com/EGalahad/any4hdmi.git
-cd active-adaptation
 ```
 
 Create the MjLab environment and install HDMI:
@@ -45,15 +41,15 @@ export WANDB_API_KEY=<your_wandb_api_key>
 export HF_TOKEN=<your_huggingface_token>
 ```
 
-Motion conversion and validation tools live in
-[`EGalahad/any4hdmi`](https://github.com/EGalahad/any4hdmi). Download the
+`any4hdmi` is installed directly from GitHub by HDMI's `pyproject.toml`; no
+separate checkout is required. Download the
 [G1 OMOMO suitcase dataset](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-suitcase)
-to the path used by the included configs:
+to the cache path used by the included task preset:
 
 ```bash
 uv run --project venv/mjlab hf download elijahgalahad/any4hdmi-g1-omomo-suitcase \
   --repo-type dataset \
-  --local-dir ../any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted
+  --local-dir .cache/any4hdmi/g1/omomo_suitcase_gmr_first_root_v2_accepted
 ```
 
 ## Train
@@ -81,7 +77,7 @@ Play a W&B checkpoint:
 uv run --project venv/mjlab projects/mimic-lite/scripts/play.py \
   task=omomo-suitcase-object-pose \
   algo=from_checkpoint \
-  checkpoint_path=run:<entity>/<project>/<run_id>:<iteration>
+  checkpoint_path=run:elijahgalahad/mimic_lite/nnds9gg2:4000
 ```
 
 The Viser viewer displays translucent reference meshes for both the robot and

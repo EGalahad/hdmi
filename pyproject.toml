@@ -6,7 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "mimic-hdmi"
 version = "0.1.0"
 requires-python = ">=3.11,<3.13"
-dependencies = ["active_adaptation", "mimic-lite", "any4hdmi"]
+dependencies = [
+    "active_adaptation",
+    "mimic-lite",
+    "any4hdmi @ git+https://github.com/EGalahad/any4hdmi.git@main",
+]
 
 [project.entry-points."active_adaptation.projects"]
 hdmi = "hdmi"
