@@ -42,15 +42,9 @@ export HF_TOKEN=<your_huggingface_token>
 ```
 
 `any4hdmi` is installed directly from GitHub by HDMI's `pyproject.toml`; no
-separate checkout is required. Download the
+separate checkout is required. The task preset resolves the
 [G1 OMOMO suitcase dataset](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-suitcase)
-to the cache path used by the included task preset:
-
-```bash
-uv run --project venv/mjlab hf download elijahgalahad/any4hdmi-g1-omomo-suitcase \
-  --repo-type dataset \
-  --local-dir .cache/any4hdmi/g1/omomo_suitcase_gmr_first_root_v2_accepted
-```
+through its `hf://` URI and reuses the standard Hugging Face cache.
 
 ## Train
 

@@ -8,12 +8,14 @@ from active_adaptation.registry import Registry
 
 
 def _resolve_dataset_root(path: str | Path) -> Path:
-    root = Path(path).expanduser()
-    if not root.is_absolute():
-        root = Path(__file__).resolve().parents[3] / root
-    root = root.resolve()
-    if not (root / "manifest.json").is_file():
-        raise FileNotFoundError(f"Missing any4hdmi manifest under {root}")
+    from any4hdmi.dataset.loading import find_any4hdmi_root, resolve_input_paths
+
+    inputs = resolve_input_paths(Path(__file__).resolve().parents[3], path)
+    if len(inputs) != 1:
+        raise ValueError(f"Expected one suitcase dataset root, got {len(inputs)}")
+    root = find_any4hdmi_root(inputs[0])
+    if root is None:
+        raise FileNotFoundError(f"Missing any4hdmi manifest above {inputs[0]}")
     return root
 
 
@@ -31,7 +33,7 @@ def _make_suitcase_spec(
     mesh = combined_root.find("./asset/mesh[@name='suitcase_mesh']")
     if mesh is None:
         raise ValueError("Dataset MJCF is missing asset mesh 'suitcase_mesh'")
-    mesh_path = (root / "meshes" / mesh.attrib["file"]).resolve()
+    mesh_path = (root / "meshes" / mesh.attrib["file"]).absolute()
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)
 

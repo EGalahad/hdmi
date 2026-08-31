@@ -2,6 +2,6 @@
 
 motion_cfgs:
   omomo_suitcase_gmr_first_root_v2_accepted:
-    path: .cache/any4hdmi/g1/omomo_suitcase_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-suitcase"
     weight: 1.0
     full_motion: true

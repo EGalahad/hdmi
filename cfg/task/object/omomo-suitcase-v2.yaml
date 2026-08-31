@@ -3,7 +3,7 @@
 objects:
   object:
     _target_: hdmi_suitcase_mesh
-    dataset_root: .cache/any4hdmi/g1/omomo_suitcase_gmr_first_root_v2_accepted
+    dataset_root: "hf://elijahgalahad/any4hdmi-g1-omomo-suitcase"
     name: object
     mass: 2.0
     rgba: [0.4, 0.3, 0.2, 1.0]
