@@ -6,14 +6,14 @@ release supports MjLab and a single rigid object per environment.
 
 ## Setup
 
-Clone the matching `dev/mimic-hdmi-v08` branches and keep `any4hdmi` next to
-Active Adaptation:
+Clone the HDMI development branches of Active Adaptation and Mimic-Lite, then
+clone HDMI's `main`. Keep `any4hdmi` next to Active Adaptation:
 
 ```bash
-git clone -b dev/mimic-hdmi-v08 https://github.com/Agent-3154/active-adaptation.git
+git clone -b dev/hdmi https://github.com/Agent-3154/active-adaptation.git
 cd active-adaptation
-git clone -b dev/mimic-hdmi-v08 https://github.com/EGalahad/mimic-lite projects/mimic-lite
-git clone -b dev/mimic-hdmi-v08 https://github.com/EGalahad/hdmi projects/hdmi
+git clone -b dev/hdmi https://github.com/EGalahad/mimic-lite projects/mimic-lite
+git clone https://github.com/EGalahad/hdmi projects/hdmi
 
 cd ..
 git clone https://github.com/EGalahad/any4hdmi.git
@@ -63,22 +63,15 @@ Train the verified G1 suitcase policy for 4,000 iterations on one 8-GPU node:
 ```bash
 bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   projects/mimic-lite/scripts/train.py venv/mjlab \
-  task=hdmi-base \
-  task/object=omomo-suitcase-v2 \
-  task/motion=g1/omomo-suitcase-gmr-first-root-v2-accepted \
-  task/observation/command=root_joint \
-  +task/variant=root-aware-global \
-  +algo/ppo/module=large \
-  task.num_envs=8192 \
-  seed=0 \
-  total_iters=4000 \
-  checkpoint_interval=1000 \
-  upload_interval=1000 \
-  wandb.mode=online
+  task=omomo-suitcase-object-pose \
+  +exp=hdmi/ppo
 ```
 
-Each GPU runs 8,192 environments. Change `task/object` and `task/motion`
-together when training another paired robot-object dataset.
+The preset selects one suitcase entity per environment, feeds its local pose to
+the policy as `object_pose_local`, and tracks the accepted OMOMO suitcase
+motions. Each GPU runs 8,192 environments; checkpoints are written every 1,000
+of the 4,000 iterations. Change `task/object` and `task/motion` together when
+training another paired robot-object dataset.
 
 ## Play
 
@@ -86,11 +79,7 @@ Play a W&B checkpoint:
 
 ```bash
 uv run --project venv/mjlab projects/mimic-lite/scripts/play.py \
-  task=hdmi-base \
-  task/object=omomo-suitcase-v2 \
-  task/motion=g1/omomo-suitcase-gmr-first-root-v2-accepted \
-  task/observation/command=root_joint \
-  +task/variant=root-aware-global \
+  task=omomo-suitcase-object-pose \
   algo=from_checkpoint \
   checkpoint_path=run:<entity>/<project>/<run_id>:<iteration>
 ```

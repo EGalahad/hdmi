@@ -1,0 +1,11 @@
+# @package task
+
+defaults:
+  - hdmi-base
+  - variant: root-aware-global
+  - _self_
+  - override object: omomo-suitcase-v2
+  - override motion: g1/omomo-suitcase-gmr-first-root-v2-accepted
+  - override observation/command: root_joint
+
+name: G1TrackHDMIOmomoSuitcaseObjectPose

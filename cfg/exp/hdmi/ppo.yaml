@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /algo/ppo/module: large
+  - override /algo: mimic_lite_ppo
+
+exp_name: hdmi-ppo
+seed: 0
+total_iters: 4000
+checkpoint_interval: 1000
+upload_interval: 1000
