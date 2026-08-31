@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run HDMI experiments"
+  short_description: "Launch and monitor HDMI training safely"
+  default_prompt: "Use $run-hdmi-experiments to launch or monitor an HDMI training run."
