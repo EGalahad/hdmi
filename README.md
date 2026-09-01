@@ -67,6 +67,7 @@ motions. Each GPU runs 8,192 environments; checkpoints are written every 1,000
 of the 4,000 iterations. The other single-object pose presets are
 `omomo-largebox-object-pose`, `omomo-smallbox-object-pose`,
 `omomo-plasticbox-object-pose`, and `omomo-trashcan-object-pose`.
+These presets do not enable multi-object routing or point-cloud observations.
 
 ## Play
 
