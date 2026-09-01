@@ -47,7 +47,7 @@ def _make_object_spec(
         raise ValueError(f"Dataset MJCF is missing mesh {source_mesh_name!r}")
     compiler = combined_root.find("compiler")
     mesh_dir = compiler.get("meshdir", "") if compiler is not None else ""
-    mesh_path = (mjcf_path.parent / mesh_dir / mesh.attrib["file"]).resolve()
+    mesh_path = (mjcf_path.parent / mesh_dir / mesh.attrib["file"]).absolute()
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)
 
