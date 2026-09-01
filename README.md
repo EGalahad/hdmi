@@ -69,6 +69,13 @@ of the 4,000 iterations. The other single-object pose presets are
 `omomo-plasticbox-object-pose`, and `omomo-trashcan-object-pose`.
 These presets do not enable multi-object routing or point-cloud observations.
 
+On GPUs with limited memory, build a new any4hdmi FK cache with smaller batches:
+
+```bash
+export ANY4HDMI_CACHE_BUILD_LOADER_BATCH_SIZE=1
+export ANY4HDMI_CACHE_BUILD_BATCH_SIZE=4096
+```
+
 ## Play
 
 Play a W&B checkpoint:

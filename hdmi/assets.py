@@ -39,9 +39,9 @@ def _make_object_spec(
     object_geom = next(
         (geom for geom in object_body.findall("geom") if geom.get("mesh")), None
     )
-    if object_geom is None:
-        raise ValueError(f"Dataset object body has no mesh geom: {mjcf_path}")
-    source_mesh_name = object_geom.attrib["mesh"]
+    source_mesh_name = (
+        object_geom.attrib["mesh"] if object_geom is not None else "object_mesh"
+    )
     mesh = combined_root.find(f"./asset/mesh[@name='{source_mesh_name}']")
     if mesh is None:
         raise ValueError(f"Dataset MJCF is missing mesh {source_mesh_name!r}")
@@ -71,11 +71,15 @@ def _make_object_spec(
         mesh="object_mesh",
         mass=str(float(mass)),
         rgba=" ".join(str(float(value)) for value in rgba),
-        **{
-            key: object_geom.attrib[key]
-            for key in ("pos", "quat")
-            if key in object_geom.attrib
-        },
+        **(
+            {
+                key: object_geom.attrib[key]
+                for key in ("pos", "quat")
+                if key in object_geom.attrib
+            }
+            if object_geom is not None
+            else {}
+        ),
     )
     return mujoco.MjSpec.from_string(ET.tostring(mjcf, encoding="unicode"))
 
