@@ -1,0 +1,7 @@
+# @package task.command
+
+motion_cfgs:
+  omomo_smallbox_gmr_first_root_v2_accepted:
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-smallbox"
+    weight: 1.0
+    full_motion: true

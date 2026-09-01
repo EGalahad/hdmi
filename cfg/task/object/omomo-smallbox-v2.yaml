@@ -1,0 +1,20 @@
+# @package task
+
+objects:
+  object:
+    _target_: hdmi_object_mesh
+    dataset_root: "hf://elijahgalahad/any4hdmi-g1-omomo-smallbox"
+    name: object
+    mass: 1.0
+    rgba: [0.45, 0.32, 0.18, 1.0]
+
+command:
+  object_name: object
+  object_root_body_name: object
+  object_tracking_body_names: [object]
+  object_tracking_joint_names: []
+
+observation:
+  policy:
+    object_pose_local:
+      _target_: hdmi.object_pose_local

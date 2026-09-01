@@ -1,0 +1,7 @@
+# @package task
+defaults:
+  - hdmi-base
+  - override object: omomo-largebox-v2
+  - override motion: g1/omomo-largebox-gmr-first-root-v2-accepted
+  - override observation/command: root_joint
+  - _self_

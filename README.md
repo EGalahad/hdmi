@@ -42,9 +42,13 @@ export HF_TOKEN=<your_huggingface_token>
 ```
 
 `any4hdmi` is installed directly from GitHub by HDMI's `pyproject.toml`; no
-separate checkout is required. The task preset resolves the
-[G1 OMOMO suitcase dataset](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-suitcase)
-through its `hf://` URI and reuses the standard Hugging Face cache.
+separate checkout is required. The task presets resolve the accepted G1 OMOMO
+datasets for [suitcase](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-suitcase),
+[largebox](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-largebox),
+[smallbox](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-smallbox),
+[plasticbox](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-plasticbox),
+and [trashcan](https://huggingface.co/datasets/elijahgalahad/any4hdmi-g1-omomo-trashcan)
+through `hf://` URIs and reuse the standard Hugging Face cache.
 
 ## Train
 
@@ -57,11 +61,12 @@ bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   +exp=hdmi/ppo
 ```
 
-The preset selects one suitcase entity per environment, feeds its local pose to
-the policy as `object_pose_local`, and tracks the accepted OMOMO suitcase
+The preset selects one rigid object per environment, feeds its local pose to
+the policy as `object_pose_local`, and tracks the matching accepted OMOMO
 motions. Each GPU runs 8,192 environments; checkpoints are written every 1,000
-of the 4,000 iterations. Change `task/object` and `task/motion` together when
-training another paired robot-object dataset.
+of the 4,000 iterations. The other single-object pose presets are
+`omomo-largebox-object-pose`, `omomo-smallbox-object-pose`,
+`omomo-plasticbox-object-pose`, and `omomo-trashcan-object-pose`.
 
 ## Play
 
