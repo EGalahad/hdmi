@@ -1,0 +1,49 @@
+# @package task
+
+name: G1SharpaControl
+project: hdmi
+nan_guard: error
+
+viewer:
+  resolution: [1280, 720]
+  lookat: [0.0, 0.0, 0.9]
+  eye: [2.5, 2.5, 1.8]
+
+terrain: plane
+num_envs: 1
+max_episode_length: 1000
+
+sim:
+  step_dt: 0.02
+  mujoco_physics_dt: 0.002
+  mujoco_integrator: implicitfast
+  mujoco_impratio: 10.0
+  mujoco_cone: elliptic
+  nconmax: 256
+  njmax: 1024
+
+robot:
+  name: g1-sharpa-mode_15
+
+input:
+  action:
+    _target_: hdmi.G1SharpaJointPositionAction
+    body_action_scaling: 0.1
+    hand_action_scaling: 0.12
+
+command:
+  _target_: hdmi.StaticPoseCommand
+
+observation:
+  state:
+    joint_pos:
+      joint_names: ".*"
+    joint_vel:
+      joint_names: ".*"
+
+reward:
+  _mult_dt_: false
+randomization: {}
+
+termination:
+  max_episode_length: {}

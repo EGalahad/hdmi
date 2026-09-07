@@ -1,0 +1,52 @@
+# @package task
+
+defaults:
+  - omomo-suitcase-object-pose
+  - _self_
+
+name: G1TrackHDMIOmomoSuitcaseObjectPoseSharpa
+
+sim:
+  # Menagerie Sharpa contact settings must be scene-level in MJLab.
+  mujoco_integrator: implicitfast
+  mujoco_impratio: 10.0
+  mujoco_cone: elliptic
+  nconmax: 256
+  njmax: 1024
+  contact_sensor_maxmatch: 128
+
+robot:
+  name: g1-sharpa-mode_15
+
+input:
+  # `action` remains the inherited 29-dimensional HDMI policy input.
+  hand_control:
+    _target_: JointPosition
+    action_scaling:
+      left_(thumb|index|middle|ring|pinky)_.*: 0.0
+      right_(thumb|index|middle|ring|pinky)_.*: 0.0
+    max_delay: 0
+    alpha_range: [1.0, 1.0]
+
+command:
+  _target_: hdmi.RobotObjectTrackingFixedSharpa
+  hand_input_key: hand_control
+
+observation:
+  priv:
+    applied_torque:
+      joint_names: ${task.shared.tracking_joint_names}
+  policy:
+    # Keep the policy observation contract body-only. The hands are physical
+    # state in this milestone, but are not inputs to the HDMI policy yet.
+    joint_pos_history:
+      joint_names: ${task.shared.tracking_joint_names}
+    joint_vel_history:
+      joint_names: ${task.shared.tracking_joint_names}
+
+reward:
+  loco:
+    joint_vel_l2:
+      joint_names: ${task.shared.tracking_joint_names}
+    joint_pos_limits:
+      joint_names: ${task.shared.tracking_joint_names}
