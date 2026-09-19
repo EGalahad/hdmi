@@ -13,3 +13,8 @@ command:
   object_root_body_name: object
   object_tracking_body_names: [object]
   object_tracking_joint_names: []
+
+observation:
+  policy:
+    object_pose_local:
+      _target_: hdmi.object_pose_local

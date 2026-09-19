@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from typing import List
 
 import numpy as np
 import torch
@@ -12,7 +11,7 @@ from active_adaptation.utils.string import resolve_matching_names
 
 
 def _resolve_unique(
-    requested: List[str] | str,
+    requested: list[str] | str,
     available: list[str],
     *,
     label: str,
@@ -23,6 +22,52 @@ def _resolve_unique(
     return [available.index(name) for name in names], list(names)
 
 
+def _variant_dataset_ids(
+    variant_names: list[str] | tuple[str, ...],
+    dataset_names: list[str],
+    world_variant_ids: torch.Tensor,
+) -> torch.Tensor:
+    if len(set(variant_names)) != len(variant_names):
+        raise ValueError(f"Duplicate object variant names: {variant_names}")
+    if len(set(dataset_names)) != len(dataset_names):
+        raise ValueError(f"Duplicate motion dataset names: {dataset_names}")
+    if set(variant_names) != set(dataset_names):
+        raise ValueError(
+            "Object variants and motion datasets must match exactly: "
+            f"variants={sorted(variant_names)}, datasets={sorted(dataset_names)}"
+        )
+    if torch.any((world_variant_ids < 0) | (world_variant_ids >= len(variant_names))):
+        raise ValueError("world variant IDs are out of range")
+    lookup = torch.tensor(
+        [dataset_names.index(name) for name in variant_names],
+        device=world_variant_ids.device,
+        dtype=torch.long,
+    )
+    return lookup[world_variant_ids.to(dtype=torch.long)]
+
+
+def _recolor_object_ghost_geoms(
+    model,
+    body_ids: set[int],
+    geom_groups_visible: list[bool],
+    ghost_color,
+) -> None:
+    original_alpha = model.geom_rgba[:, 3].copy()
+    for geom_id in range(model.ngeom):
+        body_id = int(model.geom_bodyid[geom_id])
+        group_id = int(model.geom_group[geom_id])
+        visible = (
+            original_alpha[geom_id] > 0
+            and body_id in body_ids
+            and group_id < len(geom_groups_visible)
+            and geom_groups_visible[group_id]
+        )
+        if visible:
+            model.geom_rgba[geom_id] = ghost_color
+        else:
+            model.geom_rgba[geom_id, 3] = 0.0
+
+
 class RobotObjectTracking(RobotTracking, namespace="hdmi"):
     """Track one combined-qpos reference using separate robot/object entities."""
 
@@ -31,8 +76,8 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         *,
         object_name: str,
         object_root_body_name: str,
-        object_tracking_body_names: List[str],
-        object_tracking_joint_names: List[str] | None = None,
+        object_tracking_body_names: list[str],
+        object_tracking_joint_names: list[str] | None = None,
         call_update: bool = True,
         **kwargs,
     ) -> None:
@@ -41,7 +86,7 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self._object_tracking_body_names_cfg = list(object_tracking_body_names)
         self._object_tracking_joint_names_cfg = list(object_tracking_joint_names or ())
         self._hdmi_call_update = call_update
-        self._object_ghost_model = None
+        self._object_ghost_models = {}
         extra_bodies = list(
             dict.fromkeys([*self._object_tracking_body_names_cfg, object_root_body_name])
         )
@@ -92,6 +137,53 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self._extra_motion_joint_names = list(object_joint_names)
         super()._initialize(env)
 
+        variant_metadata = self.object.variant_metadata
+        if variant_metadata is not None:
+            world_to_variant = env.sim.world_to_variant
+            if self.object_name not in world_to_variant:
+                raise ValueError(
+                    f"Missing per-world variant assignment for {self.object_name!r}"
+                )
+            self.object_variant_names = tuple(variant_metadata.variant_names)
+            self.object_variant_ids = world_to_variant[self.object_name].to(self.device)
+            dataset_ids = _variant_dataset_ids(
+                self.object_variant_names,
+                self.dataset.dataset_names,
+                self.object_variant_ids,
+            )
+            self.dataset.bind_env_dataset_ids(dataset_ids)
+            counts = torch.bincount(
+                self.object_variant_ids, minlength=len(self.object_variant_names)
+            ).cpu()
+            print(
+                "[hdmi][object_variants] "
+                + " ".join(
+                    f"{name}={int(count)}"
+                    for name, count in zip(
+                        self.object_variant_names, counts, strict=True
+                    )
+                )
+            )
+            surface_points = getattr(self.object.cfg, "surface_points", None)
+            if surface_points is None or set(surface_points) != set(self.object_variant_names):
+                raise ValueError("Object variants are missing matching surface point clouds")
+            self.object_surface_points = torch.as_tensor(
+                np.stack([surface_points[name] for name in self.object_variant_names]),
+                device=self.device,
+                dtype=torch.float32,
+            )
+            expected_masses = torch.tensor(
+                [self.object.cfg.variant_masses[name] for name in self.object_variant_names],
+                device=self.device,
+            )[self.object_variant_ids]
+            runtime_masses = env.sim.model.body_mass[:, self.object.indexing.root_body_id]
+            if not torch.allclose(runtime_masses, expected_masses):
+                raise ValueError("Per-world object masses do not match variant configuration")
+        else:
+            self.object_variant_names = ()
+            self.object_variant_ids = None
+            self.object_surface_points = None
+
         if self.tracking_body_names != list(robot_body_names):
             raise RuntimeError("Robot tracking body order changed during initialization")
         if self.tracking_joint_names != list(robot_joint_names):
@@ -100,7 +192,7 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self.robot_tracking_body_names = list(self.tracking_body_names)
         self.robot_tracking_joint_names = list(self.tracking_joint_names)
         missing_reference_bodies = sorted(
-            set([*object_body_names, self.object_root_body_name])
+            {*object_body_names, self.object_root_body_name}
             - set(self.dataset.body_names)
         )
         missing_reference_joints = sorted(
@@ -225,23 +317,38 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         if scene is None:
             return
 
-        if self._object_ghost_model is None:
-            self._object_ghost_model = copy.deepcopy(sim.mj_model)
+        def ghost_model(env_idx: int):
+            variant_id = (
+                -1
+                if self.object_variant_ids is None
+                else int(self.object_variant_ids[env_idx].item())
+            )
+            if variant_id in self._object_ghost_models:
+                return self._object_ghost_models[variant_id]
+            model = copy.deepcopy(sim.mj_model)
+            if variant_id >= 0:
+                from mjlab.viewer.model_sync import (
+                    VIEWER_MODEL_FIELDS,
+                    sync_model_fields,
+                )
+
+                sync_model_fields(
+                    model,
+                    sim.model,
+                    sim.expanded_fields & VIEWER_MODEL_FIELDS,
+                    env_idx,
+                )
             object_body_ids = set(
                 np.asarray(self.object.indexing.body_ids.cpu().numpy()).reshape(-1)
             )
-            for geom_id in range(self._object_ghost_model.ngeom):
-                body_id = int(self._object_ghost_model.geom_bodyid[geom_id])
-                group_id = int(self._object_ghost_model.geom_group[geom_id])
-                visible = (
-                    body_id in object_body_ids
-                    and group_id < len(scene.geom_groups_visible)
-                    and scene.geom_groups_visible[group_id]
-                )
-                if visible:
-                    self._object_ghost_model.geom_rgba[geom_id] = self.viz.ghost_color
-                else:
-                    self._object_ghost_model.geom_rgba[geom_id, 3] = 0.0
+            _recolor_object_ghost_geoms(
+                model,
+                object_body_ids,
+                scene.geom_groups_visible,
+                self.viz.ghost_color,
+            )
+            self._object_ghost_models[variant_id] = model
+            return model
 
         env_ids = (
             range(self.num_envs)
@@ -273,6 +380,6 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
                 ].cpu().numpy()
             scene.add_ghost_mesh(
                 qpos,
-                model=self._object_ghost_model,
+                model=ghost_model(env_idx),
                 label=f"object_env_{env_idx}",
             )

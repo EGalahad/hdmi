@@ -1,0 +1,265 @@
+from typing import Sequence
+
+import torch
+import torch.distributed as dist
+import torch.nn as nn
+from tensordict import TensorDict
+from tensordict.nn import TensorDictModuleBase
+
+import active_adaptation as aa
+from active_adaptation.learning.modules.vecnorm import VecNorm
+from active_adaptation.learning.ppo.common import ACTION_KEY
+
+REF_JPOS_KEY = "ref_joint_pos_"
+PRIV_TEACHER_KEY = "priv_teacher"
+PRIV_STUDENT_KEY = "priv_student"
+CMD_LONG_KEY = "command_long"
+OBJECT_PCD_KEY = "object_pcd"
+OBJECT_PCD_FEATURE_KEY = "_object_pcd_feature"
+OBJECT_CATEGORY_KEY = "object_category"
+OBJECT_MOTION_PROGRESS_KEY = "object_motion_progress"
+
+
+class PointCloudEncoder(nn.Module):
+    """Encode a fixed 256-point surface cloud with permutation-invariant pooling."""
+
+    def __init__(
+        self,
+        num_points: int = 256,
+        hidden_dims: Sequence[int] = (64, 128),
+    ) -> None:
+        super().__init__()
+        self.num_points = int(num_points)
+        if len(hidden_dims) != 2:
+            raise ValueError("PointCloudEncoder requires exactly two hidden dimensions")
+        hidden_dim, output_dim = (int(dim) for dim in hidden_dims)
+        self.point_mlp = nn.Sequential(
+            nn.Linear(3, hidden_dim),
+            nn.Mish(),
+            nn.Linear(hidden_dim, output_dim),
+            nn.Mish(),
+        )
+
+    def forward(self, points: torch.Tensor) -> torch.Tensor:
+        if points.shape[-1] != self.num_points * 3:
+            raise ValueError(
+                f"Expected {self.num_points * 3} point-cloud values, "
+                f"got {points.shape[-1]}"
+            )
+        encoded = self.point_mlp(points.reshape(*points.shape[:-1], self.num_points, 3))
+        return encoded.max(dim=-2).values
+
+
+@torch.no_grad()
+def object_category_metrics(
+    tensordict: TensorDict,
+    category_names: Sequence[str],
+) -> dict[str, torch.Tensor]:
+    """Aggregate rollout reward, termination, success, and progress by object."""
+    category = tensordict[OBJECT_CATEGORY_KEY].long().squeeze(-1)
+    metrics = {}
+    for category_id, name in enumerate(category_names):
+        mask = category == category_id
+        if not mask.any():
+            continue
+        progress = tensordict[OBJECT_MOTION_PROGRESS_KEY][mask]
+        metrics[f"category/{name}/motion_progress"] = progress.float().mean()
+        rewards = tensordict.get(("next", "reward"))
+        if isinstance(rewards, TensorDict):
+            for group, value in rewards.items():
+                metrics[f"category/{name}/reward.{group}"] = value[mask].float().mean()
+        done = tensordict["next", "done"].squeeze(-1)
+        done_mask = mask & done
+        if done_mask.any():
+            stats = tensordict.get(("next", "stats"))
+            if isinstance(stats, TensorDict):
+                success = stats.get("success")
+                if success is not None:
+                    metrics[f"category/{name}/success"] = success[done_mask].float().mean()
+                termination = stats.get("termination")
+                if isinstance(termination, TensorDict):
+                    for term_name, value in termination.items():
+                        metrics[f"category/{name}/termination.{term_name}"] = (
+                            value[done_mask].float().mean()
+                        )
+    return metrics
+
+
+class NullVecNorm(VecNorm):
+    """Identity VecNorm that keeps the module/state interface intact."""
+
+    def forward(self, input_vector: torch.Tensor):
+        return input_vector
+
+    def _update(self, input_vector: torch.Tensor):
+        raise RuntimeError("NullVecNorm does not support updating statistics.")
+
+    def _compute(self):
+        raise RuntimeError("NullVecNorm does not compute normalization.")
+
+    def synchronize(self, mode: str = "broadcast"):
+        del mode
+        return None
+
+
+class EmpiricalNormalizer(nn.Module):
+    """Running mean/std normalizer for off-policy actor and critic inputs."""
+
+    def __init__(
+        self,
+        shape: int | Sequence[int],
+        device: torch.device | str,
+        eps: float = 1e-2,
+        until: int | None = None,
+    ) -> None:
+        super().__init__()
+        if isinstance(shape, int):
+            shape = (shape,)
+        self.eps = float(eps)
+        self.until = until
+        self.register_buffer("_mean", torch.zeros(tuple(shape), device=device).unsqueeze(0))
+        self.register_buffer("_var", torch.ones(tuple(shape), device=device).unsqueeze(0))
+        self.register_buffer("_std", torch.ones(tuple(shape), device=device).unsqueeze(0))
+        self.register_buffer("count", torch.tensor(0, dtype=torch.long, device=device))
+
+    @torch.no_grad()
+    def forward(
+        self,
+        x: torch.Tensor,
+        *,
+        center: bool = True,
+        update: bool = True,
+    ) -> torch.Tensor:
+        if x.shape[1:] != self._mean.shape[1:]:
+            raise ValueError(
+                f"Expected input of shape (*,{self._mean.shape[1:]}), got {tuple(x.shape)}"
+            )
+        if self.training and update:
+            self.update(x)
+        if center:
+            return (x - self._mean) / (self._std + self.eps)
+        return x / (self._std + self.eps)
+
+    @torch.no_grad()
+    def update(self, x: torch.Tensor) -> None:
+        if self.until is not None and int(self.count.item()) >= self.until:
+            return
+
+        if aa.is_distributed() and dist.is_available() and dist.is_initialized():
+            local_batch = x.shape[0]
+            global_batch = dist.get_world_size() * local_batch
+
+            x_shifted = x - self._mean
+            local_sum_shifted = torch.sum(x_shifted, dim=0, keepdim=True)
+            local_sum_sq_shifted = torch.sum(x_shifted.pow(2), dim=0, keepdim=True)
+
+            stats = torch.cat([local_sum_shifted, local_sum_sq_shifted], dim=0)
+            dist.all_reduce(stats, op=dist.ReduceOp.SUM)
+            global_sum_shifted, global_sum_sq_shifted = stats
+
+            batch_mean_shifted = global_sum_shifted / global_batch
+            batch_var = global_sum_sq_shifted / global_batch - batch_mean_shifted.pow(2)
+            batch_mean = batch_mean_shifted + self._mean
+        else:
+            global_batch = x.shape[0]
+            batch_mean = torch.mean(x, dim=0, keepdim=True)
+            batch_var = torch.var(x, dim=0, keepdim=True, unbiased=False)
+
+        new_count = self.count + global_batch
+        delta = batch_mean - self._mean
+        self._mean.copy_(self._mean + delta * (global_batch / new_count))
+
+        delta2 = batch_mean - self._mean
+        m_a = self._var * self.count
+        m_b = batch_var * global_batch
+        m2 = m_a + m_b + delta2.pow(2) * (self.count * global_batch / new_count)
+        self._var.copy_(m2 / new_count)
+        self._std.copy_(self._var.sqrt())
+        self.count.copy_(new_count)
+
+
+def check_vecnorm_divergence(vecnorm: VecNorm):
+    world_size = aa.get_world_size()
+
+    loc_scale = torch.stack(vecnorm._compute())
+    gathered = [torch.empty_like(loc_scale) for _ in range(world_size)]
+    dist.all_gather(gathered, loc_scale)
+
+    loc_diffs = []
+    scale_diffs = []
+    for i in range(world_size):
+        loc_diff = torch.abs(gathered[i][0] - loc_scale[0]).sum().item()
+        scale_diff = torch.abs(gathered[i][1] - loc_scale[1]).sum().item()
+        loc_diffs.append(loc_diff)
+        scale_diffs.append(scale_diff)
+    return loc_diffs, scale_diffs
+
+
+class MeanAction(TensorDictModuleBase):
+    in_keys = ["loc"]
+    out_keys = [ACTION_KEY]
+
+    def forward(self, td):
+        td[ACTION_KEY] = td["loc"]
+        return td
+
+
+class ObsOODDetector(TensorDictModuleBase):
+    def __init__(self, in_keys, sigma: float = 5.0):
+        super().__init__()
+        self.in_keys = in_keys
+        self.out_keys = [("next", f"{k}_ood_ratio") for k in in_keys] + [
+            ("next", k) for k in in_keys
+        ]
+        self.sigma = sigma
+
+    def forward(self, tensordict: TensorDict):
+        for in_key in self.in_keys:
+            obs = tensordict.get(in_key, None)
+            if obs is not None:
+                ood_ratio = (obs.abs() > self.sigma).float().mean(dim=-1, keepdim=True)
+                tensordict.set(("next", f"{in_key}_ood_ratio"), ood_ratio)
+                tensordict.set(("next", in_key), obs)
+        return tensordict
+
+
+class ActorROA(nn.Module):
+    def __init__(
+        self,
+        action_dim: int,
+        init_noise_scale: float = 1.0,
+        load_noise_scale: float | None = None,
+    ) -> None:
+        super().__init__()
+        self.actor_mean = nn.LazyLinear(action_dim)
+        self.actor_std = nn.Parameter(torch.ones(action_dim) * init_noise_scale)
+        self.scale_mapping = nn.Identity()
+        self.load_noise_scale = load_noise_scale
+
+    def forward(self, features: torch.Tensor):
+        loc = self.actor_mean(features)
+        scale = torch.ones_like(loc) * self.actor_std
+        scale = self.scale_mapping(scale)
+        return loc, scale
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
+        if self.load_noise_scale is not None:
+            self.actor_std.data.fill_(self.load_noise_scale)

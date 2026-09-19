@@ -1,0 +1,10 @@
+# @package algo
+
+encoder_in_keys: [policy, command]
+use_actor_encoder: true
+encoder_hidden_dims: [1024, 1024]
+latent_dim: 1024
+actor_in_keys: [policy]
+actor_hidden_dims: [1024, 1024, 1024]
+critic_hidden_dims: [1024, 512, 512]
+in_keys: [command, policy, priv, object_pcd]

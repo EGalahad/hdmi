@@ -1,0 +1,23 @@
+# @package task.command
+
+motion_cfgs:
+  suitcase:
+    path: ../any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted
+    weight: 0.2
+    full_motion: true
+  largebox:
+    path: ../any4hdmi/output/g1/omomo_largebox_gmr_first_root_v2_accepted
+    weight: 0.2
+    full_motion: true
+  smallbox:
+    path: ../any4hdmi/output/g1/omomo_smallbox_gmr_first_root_v2_accepted
+    weight: 0.2
+    full_motion: true
+  plasticbox:
+    path: ../any4hdmi/output/g1/omomo_plasticbox_gmr_first_root_v2_accepted
+    weight: 0.2
+    full_motion: true
+  trashcan:
+    path: ../any4hdmi/output/g1/omomo_trashcan_gmr_first_root_v2_accepted
+    weight: 0.2
+    full_motion: true

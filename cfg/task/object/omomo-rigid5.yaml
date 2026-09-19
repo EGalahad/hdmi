@@ -1,0 +1,43 @@
+# @package task
+
+objects:
+  object:
+    _target_: hdmi_object_mesh_variants
+    motion_cfgs: ${task.command.motion_cfgs}
+    masses:
+      suitcase: 2.0
+      largebox: 4.0
+      smallbox: 1.0
+      plasticbox: 2.0
+      trashcan: 3.0
+    ballast_fractions:
+      trashcan: 0.3
+    up_directions:
+      suitcase: +y
+      largebox: -z
+      smallbox: +z
+      plasticbox: +y
+      trashcan: -y
+    collision_vertex_count: 32
+    support_plane_offset: 0.003
+    seed: ${seed}
+
+command:
+  object_name: object
+  object_root_body_name: object
+  object_tracking_body_names: [object]
+  object_tracking_joint_names: []
+
+observation:
+  policy:
+    object_pose_local:
+      _target_: hdmi.object_pose_local
+  object_pcd:
+    surface_points:
+      _target_: hdmi.object_surface_points_local
+  object_category:
+    category:
+      _target_: hdmi.object_category
+  object_motion_progress:
+    progress:
+      _target_: hdmi.object_motion_progress

@@ -4,6 +4,11 @@ HDMI extends [MimicLite](https://github.com/EGalahad/mimic-lite) from robot-only
 motion tracking to paired robot-object interaction tracking. The current
 release supports MjLab and a single rigid object per environment.
 
+Robot tracking, palm/FK handling, and the standard ROA stages come from the
+Mimic-Lite 1.1 branch. This repository owns the HDMI-specific object assets,
+motions, observations, rewards, and learning modules; it does not fork the
+robot tracking configuration.
+
 ## Setup
 
 Clone the HDMI development branches of Active Adaptation and Mimic-Lite, then

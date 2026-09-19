@@ -4,6 +4,11 @@ reward:
   tracking:
     root_pos:
       _target_: mimic_lite.body_pos_exp
+  object_tracking:
+    body_pos:
+      _target_: mimic_lite.body_pos_exp
+    body_ori:
+      _target_: mimic_lite.body_ori_exp
 
 termination:
   root_pos_error:

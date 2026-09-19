@@ -15,6 +15,9 @@ dependencies = [
 [project.entry-points."active_adaptation.projects"]
 hdmi = "hdmi"
 
+[project.entry-points."active_adaptation.learning"]
+hdmi = "hdmi_learning"
+
 [tool.setuptools.packages]
 find = { where = ["."], include = ["hdmi*"] }
 
