@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - /algo/ppo/module: large
+  - override /algo: hdmi_ppo
+
+exp_name: hdmi-rigid5-pcd-only-8k
+seed: 0
+total_iters: 8000
+checkpoint_interval: 1000
+upload_interval: 1000
+
+algo:
+  pcd_hidden_dims: [32, 64]
+  normalize_before_sum: true
+  object_reward_scale: 1.0
+  grad_accum_steps: 1
+  value_chunk_size: 16384

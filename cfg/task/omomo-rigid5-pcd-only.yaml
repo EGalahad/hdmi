@@ -1,0 +1,11 @@
+# @package task
+
+defaults:
+  - hdmi-base
+  - variant: root-aware-global
+  - _self_
+  - override object: omomo-rigid5
+  - override motion: g1/omomo-rigid5
+  - override observation/command: root_joint
+
+name: G1TrackHDMIOmomoRigid5PCDOnly

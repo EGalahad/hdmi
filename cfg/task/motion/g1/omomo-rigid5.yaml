@@ -2,22 +2,22 @@
 
 motion_cfgs:
   suitcase:
-    path: ../any4hdmi/output/g1/omomo_suitcase_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-suitcase"
     weight: 0.2
     full_motion: true
   largebox:
-    path: ../any4hdmi/output/g1/omomo_largebox_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-largebox"
     weight: 0.2
     full_motion: true
   smallbox:
-    path: ../any4hdmi/output/g1/omomo_smallbox_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-smallbox"
     weight: 0.2
     full_motion: true
   plasticbox:
-    path: ../any4hdmi/output/g1/omomo_plasticbox_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-plasticbox"
     weight: 0.2
     full_motion: true
   trashcan:
-    path: ../any4hdmi/output/g1/omomo_trashcan_gmr_first_root_v2_accepted
+    path: "hf://elijahgalahad/any4hdmi-g1-omomo-trashcan"
     weight: 0.2
     full_motion: true

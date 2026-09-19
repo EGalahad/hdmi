@@ -81,3 +81,22 @@ uv run --project venv/mjlab projects/mimic-lite/scripts/play.py \
 
 The Viser viewer displays translucent reference meshes for both the robot and
 the object.
+
+## Five-rigid PCD-only reproduction
+
+The public five-category PCD-only task uses the five accepted OMOMO datasets,
+256 object points, and the PCD encoder. Run the 8,000-iteration reproduction
+on one eight-GPU node with:
+
+```bash
+export ANY4HDMI_CACHE_BUILD_LOADER_BATCH_SIZE=1
+export ANY4HDMI_CACHE_BUILD_BATCH_SIZE=4096
+
+bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
+  projects/mimic-lite/scripts/train.py venv/mjlab \
+  task=omomo-rigid5-pcd-only \
+  +exp=hdmi/pcd8k
+```
+
+The motion config uses public `hf://` dataset references, so a fresh checkout
+does not depend on a sibling private dataset directory.

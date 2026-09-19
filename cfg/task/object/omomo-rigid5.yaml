@@ -29,9 +29,6 @@ command:
   object_tracking_joint_names: []
 
 observation:
-  policy:
-    object_pose_local:
-      _target_: hdmi.object_pose_local
   object_pcd:
     surface_points:
       _target_: hdmi.object_surface_points_local
