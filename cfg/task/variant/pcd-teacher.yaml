@@ -1,0 +1,7 @@
+# @package task
+# Privileged, noise-free full object surface cloud (the pre-camera PCD) as an extra
+# observation group, e.g. for an asymmetric critic or a distillation teacher.
+observation:
+  object_pcd_gt:
+    surface_points:
+      _target_: hdmi.object_surface_points_local

@@ -10,3 +10,14 @@ defaults:
   - override observation/command: root_joint
 
 name: G1TrackHDMIOmomoRigid5PCDOnly
+
+observation:
+  object_pcd:
+    surface_points:
+      _target_: hdmi.object_surface_points_local
+  object_category:
+    category:
+      _target_: hdmi.object_category
+  object_motion_progress:
+    progress:
+      _target_: hdmi.object_motion_progress

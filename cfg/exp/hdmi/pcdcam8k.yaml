@@ -1,0 +1,22 @@
+# @package _global_
+# Five-object OMOMO task with the camera-realistic object point cloud
+# (masked depth from the head camera, unprojected, fixed 256 points).
+defaults:
+  - /algo/ppo/module: large
+  - override /algo: hdmi_ppo
+
+exp_name: hdmi-rigid5-pcd-camera-8k
+seed: 0
+total_iters: 8000
+checkpoint_interval: 1000
+upload_interval: 1000
+
+algo:
+  use_object_pcd: true
+  use_depth: false
+  pcd_hidden_dims: [32, 64]
+  actor_in_keys: [policy, command, object_pcd_valid]
+  normalize_before_sum: true
+  object_reward_scale: 1.0
+  grad_accum_steps: 1
+  value_chunk_size: 16384

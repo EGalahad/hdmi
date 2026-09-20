@@ -1,0 +1,24 @@
+# @package _global_
+# Five-object OMOMO task driven by the head depth image only
+# (depth -> CNN -> MLP -> action, no object point cloud).
+defaults:
+  - /algo/ppo/module: large
+  - override /algo: hdmi_ppo
+
+exp_name: hdmi-rigid5-depth-8k
+seed: 0
+total_iters: 8000
+checkpoint_interval: 1000
+upload_interval: 1000
+
+algo:
+  use_object_pcd: false
+  use_depth: true
+  depth_channels: [16, 32, 64]
+  depth_kernel_sizes: [5, 3, 3]
+  depth_feature_dim: 64
+  depth_lr: 3.0e-4
+  normalize_before_sum: true
+  object_reward_scale: 1.0
+  grad_accum_steps: 1
+  value_chunk_size: 16384

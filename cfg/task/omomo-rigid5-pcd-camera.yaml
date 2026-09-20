@@ -1,0 +1,49 @@
+# @package task
+
+defaults:
+  - hdmi-base
+  - variant: root-aware-global
+  - _self_
+  - patches: v1_1
+  - override object: omomo-rigid5
+  - override motion: g1/omomo-rigid5
+  - override observation/command: root_joint
+
+name: G1TrackHDMIOmomoRigid5PCDCamera
+
+sensors:
+  head_camera:
+    _target_: hdmi_head_camera
+    body_name: torso_link
+    pos: [0.0576, 0.0175, 0.4299]
+    pitch_down_deg: 0.0        # real G1 D435 tilt: 47.6
+    fovy: 58.0
+    width: 64
+    height: 48
+    data_types: [depth, segmentation]
+
+observation:
+  object_pcd:
+    surface_points:
+      _target_: hdmi.object_pcd_camera
+      sensor_name: head_camera
+      num_points: 256
+      cutoff_m: 3.0
+      depth_noise_std_m: 0.002
+      depth_noise_quad: 0.0025
+      depth_quant_m: 0.004
+      mask_corrupt_prob: 0.5
+      mask_erode_dilate_max: 1
+      pixel_dropout: 0.1
+      false_negative_prob: 0.05
+      extrinsic_rot_jitter_deg: 2.0
+      extrinsic_pos_jitter_m: 0.01
+  object_pcd_valid:
+    valid:
+      _target_: hdmi.object_pcd_valid
+  object_category:
+    category:
+      _target_: hdmi.object_category
+  object_motion_progress:
+    progress:
+      _target_: hdmi.object_motion_progress

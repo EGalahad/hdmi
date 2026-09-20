@@ -27,14 +27,3 @@ command:
   object_root_body_name: object
   object_tracking_body_names: [object]
   object_tracking_joint_names: []
-
-observation:
-  object_pcd:
-    surface_points:
-      _target_: hdmi.object_surface_points_local
-  object_category:
-    category:
-      _target_: hdmi.object_category
-  object_motion_progress:
-    progress:
-      _target_: hdmi.object_motion_progress
