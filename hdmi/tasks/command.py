@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 
 import numpy as np
 import torch
@@ -90,6 +91,10 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         extra_bodies = list(
             dict.fromkeys([*self._object_tracking_body_names_cfg, object_root_body_name])
         )
+        if os.environ.get("HDMI_PALM_DATASETS", "1") != "0" and "motion_cfgs" in kwargs:
+            from hdmi.palm_datasets import palm_motion_cfgs
+
+            kwargs["motion_cfgs"] = palm_motion_cfgs(kwargs["motion_cfgs"])
         super().__init__(
             extra_motion_body_names=extra_bodies,
             extra_motion_joint_names=self._object_tracking_joint_names_cfg,

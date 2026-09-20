@@ -45,13 +45,35 @@ def _make_suitcase_spec(
     import mujoco
 
     root = _resolve_dataset_root(dataset_root)
-    combined_root = ET.parse(root / "g1-suitcase.xml").getroot()
+    # Any any4hdmi object dataset: the manifest names the combined MJCF
+    # (g1-suitcase.xml, g1-trashcan.xml, ...); fall back to the suitcase name.
+    manifest_path = root / "manifest.json"
+    if manifest_path.is_file():
+        mjcf_path = root / json.loads(manifest_path.read_text())["mjcf"]
+    else:
+        mjcf_path = root / "g1-suitcase.xml"
+    combined_root = ET.parse(mjcf_path).getroot()
     mesh = combined_root.find("./asset/mesh[@name='suitcase_mesh']")
     if mesh is None:
-        raise ValueError("Dataset MJCF is missing asset mesh 'suitcase_mesh'")
+        # generic object datasets name the mesh after the object; take the mesh
+        # referenced by the 'object' body, else the first asset mesh
+        body = combined_root.find(".//body[@name='object']")
+        geom = None
+        if body is not None:
+            geom = next((g for g in body.findall("geom") if g.get("mesh")), None)
+        mesh_name = geom.get("mesh") if geom is not None else None
+        mesh = (
+            combined_root.find(f"./asset/mesh[@name='{mesh_name}']")
+            if mesh_name
+            else combined_root.find("./asset/mesh")
+        )
+    if mesh is None:
+        raise ValueError(f"{mjcf_path} is missing the object mesh asset")
     mesh_file = mesh.attrib["file"]
+    compiler = combined_root.find("compiler")
+    mesh_dir = compiler.get("meshdir", "meshes") if compiler is not None else "meshes"
     mesh_path = _mesh_path_with_source_suffix(
-        (root / "meshes" / mesh_file).absolute(), mesh_file
+        (mjcf_path.parent / mesh_dir / mesh_file).resolve(), mesh_file
     )
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)
