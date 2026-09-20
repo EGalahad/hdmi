@@ -50,12 +50,15 @@ from .common import (
     ActorROA,
     MeanAction,
     NullVecNorm,
-    OBJECT_PCD_FEATURE_KEY,
+    DepthEncoder,
+    HEAD_DEPTH_KEY,
     OBJECT_PCD_KEY,
+    OBJECT_PCD_VALID_KEY,
     OBJECT_CATEGORY_KEY,
     OBJECT_MOTION_PROGRESS_KEY,
     ObsOODDetector,
     PointCloudEncoder,
+    feature_key,
     check_vecnorm_divergence,
     object_category_metrics,
 )
@@ -159,6 +162,15 @@ class PPOConfig:
     pcd_lr: float = 3e-4
     pcd_num_points: int = 256
     pcd_hidden_dims: Tuple[int, int] = (32, 64)
+    # Observation encoders. ``object_pcd`` -> PointCloudEncoder, ``head_depth`` -> DepthEncoder.
+    use_object_pcd: bool = True
+    use_depth: bool = False
+    depth_in_key: str = HEAD_DEPTH_KEY
+    depth_channels: Tuple[int, ...] = (16, 32, 64)
+    depth_kernel_sizes: Tuple[int, ...] = (5, 3, 3)
+    depth_feature_dim: int = 64
+    depth_lr: float = 3e-4
+    depth_input_scale: float = 1.0 / 255.0
     object_category_names: tuple[str, ...] = (
         "suitcase",
         "largebox",
@@ -298,6 +310,26 @@ class PPOConfig:
 
         self.grad_accum_steps = max(1, int(self.grad_accum_steps))
 
+        in_keys = [str(key) for key in self.in_keys]
+        if not self.use_object_pcd:
+            in_keys = [key for key in in_keys if key != OBJECT_PCD_KEY]
+        elif OBJECT_PCD_KEY not in in_keys:
+            in_keys.append(OBJECT_PCD_KEY)
+        if self.use_depth and self.depth_in_key not in in_keys:
+            in_keys.append(self.depth_in_key)
+        if not self.use_depth:
+            in_keys = [key for key in in_keys if key != self.depth_in_key]
+        for key in self.actor_in_keys:
+            if key not in in_keys:
+                in_keys.append(key)
+        self.in_keys = tuple(in_keys)
+        if not self.use_object_pcd and not self.use_depth:
+            raise ValueError("hdmi_ppo needs at least one object encoder: use_object_pcd or use_depth")
+        if self.use_depth and len(self.depth_channels) == 0:
+            raise ValueError("depth_channels must be non-empty when use_depth=True")
+        if self.use_depth and self.depth_feature_dim <= 0:
+            raise ValueError("depth_feature_dim must be positive when use_depth=True")
+
         if isinstance(self.rollout_amp_dtype, str):
             self.rollout_amp_dtype = self.rollout_amp_dtype.lower()
             if self.rollout_amp_dtype in {"none", "null", "false", "0"}:
@@ -422,13 +454,10 @@ class PPOPolicy(PPOBase):
             raise KeyError(f"Missing required observation keys: {missing_keys}")
 
         actor_in_keys = list(self.cfg.actor_in_keys)
-        critic_in_keys = [OBS_PRIV_KEY, OBS_KEY, CMD_KEY, OBJECT_PCD_FEATURE_KEY]
+        self._build_encoders(observation_spec)
+        critic_in_keys = [OBS_PRIV_KEY, OBS_KEY, CMD_KEY, *self.feature_keys]
 
-        self.object_pcd_encoder = PointCloudEncoder(
-            self.cfg.pcd_num_points, self.cfg.pcd_hidden_dims
-        ).to(self.device)
-
-        self.actor = self._build_actor([*actor_in_keys, OBJECT_PCD_FEATURE_KEY])
+        self.actor = self._build_actor([*actor_in_keys, *self.feature_keys])
         self.critic = Seq(
             CatTensors(critic_in_keys, "_critic_input", del_keys=False, sort=False),
             Mod(
@@ -448,7 +477,7 @@ class PPOPolicy(PPOBase):
         fake_input = observation_spec.zero()
         with VecNorm.freeze():
             self.vecnorm(fake_input)
-        self._encode_object_pcd(fake_input)
+        self._encode_features(fake_input)
         self.actor(fake_input)
         self.critic(fake_input)
 
@@ -489,9 +518,10 @@ class PPOPolicy(PPOBase):
         self.lr_policy = self.cfg.lr
         self.opt_policy = self._make_optimizer([self.actor], lr=self.lr_policy)
         self.opt_critic = self._make_optimizer([self.critic], lr=self.cfg.lr)
-        self.opt_pcd = self._make_optimizer(
-            [self.object_pcd_encoder], lr=self.cfg.pcd_lr
-        )
+        self.opt_encoders: dict[str, torch.optim.Optimizer] = {}
+        for key, encoder in self.obs_encoders.items():
+            lr = self.cfg.depth_lr if key == self.cfg.depth_in_key else self.cfg.pcd_lr
+            self.opt_encoders[key] = self._make_optimizer([encoder], lr=lr)
 
         self.update_ppo = self._update_ppo
         if self.cfg.compile and not aa.is_distributed():
@@ -625,15 +655,19 @@ class PPOPolicy(PPOBase):
         self.vecnorms: Mapping[str, VecNorm] = nn.ModuleDict()
         vecnorm_cls = NullVecNorm if self.cfg.vecnorm is None else VecNorm
 
+        encoded_keys = {OBJECT_PCD_KEY, self.cfg.depth_in_key}
         for key in self.cfg.in_keys:
             if key in {
-                OBJECT_PCD_KEY,
+                *encoded_keys,
+                OBJECT_PCD_VALID_KEY,
                 OBJECT_CATEGORY_KEY,
                 OBJECT_MOTION_PROGRESS_KEY,
             }:
                 continue
             if key not in observation_spec.keys(True, True):
                 continue
+            if len(observation_spec[key].shape) > 2:
+                continue  # image-shaped groups are consumed by an encoder, never normalised
             shape = observation_spec[key].shape[-1:]
             vecnorm = vecnorm_cls(input_shape=shape, stats_shape=shape, decay=0.9999)
             self.vecnorms[key] = vecnorm
@@ -641,16 +675,50 @@ class PPOPolicy(PPOBase):
 
         self.vecnorm = Seq(*modules).to(self.device)
 
-    def _encode_object_pcd(self, tensordict: TensorDict) -> None:
-        tensordict.set(
-            OBJECT_PCD_FEATURE_KEY,
-            self.object_pcd_encoder(tensordict[OBJECT_PCD_KEY]),
-        )
+    def _build_encoders(self, observation_spec: CompositeSpec) -> None:
+        """Instantiate one encoder per exteroceptive observation group."""
+        self.obs_encoders = nn.ModuleDict()
+        if self.cfg.use_object_pcd:
+            self.obs_encoders[OBJECT_PCD_KEY] = PointCloudEncoder(
+                self.cfg.pcd_num_points, self.cfg.pcd_hidden_dims
+            )
+        if self.cfg.use_depth:
+            spec_shape = tuple(observation_spec[self.cfg.depth_in_key].shape)
+            in_channels = int(spec_shape[-3]) if len(spec_shape) >= 3 else 1
+            self.obs_encoders[self.cfg.depth_in_key] = DepthEncoder(
+                in_channels=in_channels,
+                channels=self.cfg.depth_channels,
+                kernel_sizes=self.cfg.depth_kernel_sizes,
+                feature_dim=self.cfg.depth_feature_dim,
+                input_scale=self.cfg.depth_input_scale,
+            )
+        self.obs_encoders.to(self.device)
+        self.feature_keys = [feature_key(key) for key in self.obs_encoders]
+
+    def _encode_features(self, tensordict: TensorDict) -> None:
+        for key, encoder in self.obs_encoders.items():
+            tensordict.set(feature_key(key), encoder(tensordict[key]))
+
+    def _encoder_modules(self) -> list[Mod]:
+        return [
+            Mod(encoder, [key], [feature_key(key)])
+            for key, encoder in self.obs_encoders.items()
+        ]
+
+    def _clip_encoder_grads(self) -> dict[str, torch.Tensor]:
+        return {
+            key: nn.utils.clip_grad_norm_(
+                encoder.parameters(),
+                self.cfg.max_grad_norm,
+                error_if_nonfinite=True,
+            )
+            for key, encoder in self.obs_encoders.items()
+        }
 
     @VecNorm.freeze()
     def compute_value(self, tensordict):
         self.vecnorm(tensordict)
-        self._encode_object_pcd(tensordict)
+        self._encode_features(tensordict)
         critic = self._unwrap_ddp(self.critic)
         return critic(tensordict)
 
@@ -662,7 +730,7 @@ class PPOPolicy(PPOBase):
         chunk_size = self.cfg.value_chunk_size
 
         if chunk_size is None or numel <= chunk_size:
-            self._encode_object_pcd(tensordict_flat)
+            self._encode_features(tensordict_flat)
             values = critic(tensordict_flat)["state_value"]
             return values.view(*tensordict.batch_size, *values.shape[1:])
 
@@ -670,7 +738,7 @@ class PPOPolicy(PPOBase):
         for start in range(0, numel, chunk_size):
             end = min(start + chunk_size, numel)
             chunk = tensordict_flat[start:end]
-            self._encode_object_pcd(chunk)
+            self._encode_features(chunk)
             chunk_values = critic(chunk)["state_value"]
             if values_flat is None:
                 values_flat = chunk_values.new_empty(
@@ -729,7 +797,7 @@ class PPOPolicy(PPOBase):
 
     @torch.no_grad()
     def _broadcast_parameters(self):
-        for module in (self.actor, self.critic, self.object_pcd_encoder):
+        for module in (self.actor, self.critic, *self.obs_encoders.values()):
             for param in module.parameters():
                 dist.broadcast(param, src=0)
 
@@ -748,7 +816,7 @@ class PPOPolicy(PPOBase):
         return nullcontext()
 
     def _actor_training_dist(self, tensordict: TensorDict) -> D.Independent:
-        self._encode_object_pcd(tensordict)
+        self._encode_features(tensordict)
         if isinstance(self.actor, DDP) or self.cfg.manual_construct_dist_now:
             # DDP training must enter the wrapper's forward so its reducer can
             # prepare gradient buckets and overlap reduction with backward.
@@ -779,11 +847,7 @@ class PPOPolicy(PPOBase):
             modules = [
                 vecnorm,
                 ood_detector,
-                Mod(
-                    self.object_pcd_encoder,
-                    [OBJECT_PCD_KEY],
-                    [OBJECT_PCD_FEATURE_KEY],
-                ),
+                *self._encoder_modules(),
                 actor_module.module[0],
             ]
             modules.append(MeanAction())
@@ -804,11 +868,7 @@ class PPOPolicy(PPOBase):
                 )
             modules = [
                 self.vecnorm,
-                Mod(
-                    self.object_pcd_encoder,
-                    [OBJECT_PCD_KEY],
-                    [OBJECT_PCD_FEATURE_KEY],
-                ),
+                *self._encoder_modules(),
                 actor,
             ]
             out_keys = [f"{ACTION_KEY}_log_prob", ACTION_KEY] + self.dist_keys
@@ -1167,16 +1227,17 @@ class PPOPolicy(PPOBase):
         with ScopedTimer("training.policy.ppo.backward", sync=PROFILE_SYNC_TIMERS):
             self.opt_policy.zero_grad()
             self.opt_critic.zero_grad()
-            self.opt_pcd.zero_grad()
+            for opt in self.opt_encoders.values():
+                opt.zero_grad()
             loss.backward()
         if aa.is_distributed():
             with ScopedTimer("training.policy.ppo.grad_sync", sync=PROFILE_SYNC_TIMERS):
                 if self.cfg.grad_sync_mode == "manual":
                     self._all_reduce_grads(
-                        self.actor, self.critic, self.object_pcd_encoder
+                        self.actor, self.critic, *self.obs_encoders.values()
                     )
                 else:
-                    self._all_reduce_grads(self.object_pcd_encoder)
+                    self._all_reduce_grads(*self.obs_encoders.values())
         with ScopedTimer("training.policy.ppo.clip_grad", sync=PROFILE_SYNC_TIMERS):
             if self.cfg.separate_actor_encoder_grad_clip:
                 actor_grad_norm = nn.utils.clip_grad_norm_(
@@ -1201,17 +1262,14 @@ class PPOPolicy(PPOBase):
                 self.cfg.max_grad_norm,
                 error_if_nonfinite=True,
             )
-            pcd_grad_norm = nn.utils.clip_grad_norm_(
-                self.object_pcd_encoder.parameters(),
-                self.cfg.max_grad_norm,
-                error_if_nonfinite=True,
-            )
+            encoder_grad_norms = self._clip_encoder_grads()
         with ScopedTimer(
             "training.policy.ppo.optimizer_step", sync=PROFILE_SYNC_TIMERS
         ):
             self.opt_policy.step()
             self.opt_critic.step()
-            self.opt_pcd.step()
+            for opt in self.opt_encoders.values():
+                opt.step()
 
         with ScopedTimer("training.policy.ppo.metrics", sync=PROFILE_SYNC_TIMERS):
             with torch.no_grad():
@@ -1231,8 +1289,9 @@ class PPOPolicy(PPOBase):
             "opt/grad_norm.actor": actor_grad_norm.detach(),
             "opt/grad_norm.encoder_priv": encoder_grad_norm.detach(),
             "opt/grad_norm.critic": critic_grad_norm.detach(),
-            "opt/grad_norm.object_pcd": pcd_grad_norm.detach(),
         }
+        for key, norm in encoder_grad_norms.items():
+            info[f"opt/grad_norm.{key}"] = norm.detach()
 
         for i, group_name in enumerate(self.reward_groups):
             info[f"critic/{group_name}.explained_var"] = explained_var[i]
@@ -1262,7 +1321,8 @@ class PPOPolicy(PPOBase):
 
         self.opt_policy.zero_grad()
         self.opt_critic.zero_grad()
-        self.opt_pcd.zero_grad()
+        for opt in self.opt_encoders.values():
+            opt.zero_grad()
 
         for start in range(0, numel, microbatch_size):
             end = min(start + microbatch_size, numel)
@@ -1345,7 +1405,7 @@ class PPOPolicy(PPOBase):
                 with ScopedTimer("training.policy.ppo.critic", sync=PROFILE_SYNC_TIMERS):
                     b_returns = micro_td["ret"]
                     with self._train_autocast():
-                        self._encode_object_pcd(critic_td)
+                        self._encode_features(critic_td)
                         values = self.critic(critic_td)["state_value"]
                     values = values.float()
                     value_loss = F.mse_loss(b_returns, values, reduction="none")
@@ -1376,10 +1436,10 @@ class PPOPolicy(PPOBase):
             with ScopedTimer("training.policy.ppo.grad_sync", sync=PROFILE_SYNC_TIMERS):
                 if self.cfg.grad_sync_mode == "manual":
                     self._all_reduce_grads(
-                        self.actor, self.critic, self.object_pcd_encoder
+                        self.actor, self.critic, *self.obs_encoders.values()
                     )
                 else:
-                    self._all_reduce_grads(self.object_pcd_encoder)
+                    self._all_reduce_grads(*self.obs_encoders.values())
         with ScopedTimer("training.policy.ppo.clip_grad", sync=PROFILE_SYNC_TIMERS):
             if self.cfg.separate_actor_encoder_grad_clip:
                 actor_grad_norm = nn.utils.clip_grad_norm_(
@@ -1404,17 +1464,14 @@ class PPOPolicy(PPOBase):
                 self.cfg.max_grad_norm,
                 error_if_nonfinite=True,
             )
-            pcd_grad_norm = nn.utils.clip_grad_norm_(
-                self.object_pcd_encoder.parameters(),
-                self.cfg.max_grad_norm,
-                error_if_nonfinite=True,
-            )
+            encoder_grad_norms = self._clip_encoder_grads()
         with ScopedTimer(
             "training.policy.ppo.optimizer_step", sync=PROFILE_SYNC_TIMERS
         ):
             self.opt_policy.step()
             self.opt_critic.step()
-            self.opt_pcd.step()
+            for opt in self.opt_encoders.values():
+                opt.step()
 
         value_loss = value_loss_sum / valid_count
         policy_loss = policy_loss_sum / valid_count
@@ -1439,8 +1496,9 @@ class PPOPolicy(PPOBase):
             "opt/grad_norm.actor": actor_grad_norm.detach(),
             "opt/grad_norm.encoder_priv": encoder_grad_norm.detach(),
             "opt/grad_norm.critic": critic_grad_norm.detach(),
-            "opt/grad_norm.object_pcd": pcd_grad_norm.detach(),
         }
+        for key, norm in encoder_grad_norms.items():
+            info[f"opt/grad_norm.{key}"] = norm.detach()
 
         for i, group_name in enumerate(self.reward_groups):
             info[f"critic/{group_name}.explained_var"] = explained_var[i]
@@ -1458,6 +1516,13 @@ class PPOPolicy(PPOBase):
         return state_dict
 
     def load_state_dict(self, state_dict, strict=True):
+        state_dict = dict(state_dict)
+        legacy = state_dict.pop("object_pcd_encoder", None)
+        if legacy is not None and "obs_encoders" not in state_dict:
+            # checkpoints written before the encoder registry
+            state_dict["obs_encoders"] = {
+                f"{OBJECT_PCD_KEY}.{name}": value for name, value in legacy.items()
+            }
         succeed_keys = []
         failed_keys = []
         failures = []

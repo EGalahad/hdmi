@@ -16,8 +16,15 @@ PRIV_STUDENT_KEY = "priv_student"
 CMD_LONG_KEY = "command_long"
 OBJECT_PCD_KEY = "object_pcd"
 OBJECT_PCD_FEATURE_KEY = "_object_pcd_feature"
+OBJECT_PCD_VALID_KEY = "object_pcd_valid"
+HEAD_DEPTH_KEY = "head_depth"
 OBJECT_CATEGORY_KEY = "object_category"
 OBJECT_MOTION_PROGRESS_KEY = "object_motion_progress"
+
+
+def feature_key(obs_key: str) -> str:
+    """Name of the encoded feature written for observation group ``obs_key``."""
+    return f"_{obs_key}_feature"
 
 
 class PointCloudEncoder(nn.Module):
@@ -48,6 +55,56 @@ class PointCloudEncoder(nn.Module):
             )
         encoded = self.point_mlp(points.reshape(*points.shape[:-1], self.num_points, 3))
         return encoded.max(dim=-2).values
+
+
+class DepthEncoder(nn.Module):
+    """Small strided CNN for a depth image ``[..., C, H, W]`` -> ``[..., feature_dim]``.
+
+    Accepts uint8 (scaled by ``input_scale``) or float input and any number of
+    leading batch dimensions, including none (needed for ONNX export of the
+    deployable policy). Built on :func:`active_adaptation.learning.ppo.common.make_conv`.
+    """
+
+    def __init__(
+        self,
+        in_channels: int = 1,
+        channels: Sequence[int] = (16, 32, 64),
+        kernel_sizes: Sequence[int] | int = (5, 3, 3),
+        feature_dim: int = 64,
+        input_scale: float = 1.0 / 255.0,
+    ) -> None:
+        super().__init__()
+        from active_adaptation.learning.ppo.common import make_conv
+
+        self.in_channels = int(in_channels)
+        self.input_scale = float(input_scale)
+        conv = make_conv(
+            self.in_channels,
+            [int(c) for c in channels],
+            list(kernel_sizes) if isinstance(kernel_sizes, Sequence) else int(kernel_sizes),
+            activation=nn.GELU,
+            flatten=True,
+        )
+        # make_conv wraps the stack in FlattenBatch, which mishandles unbatched
+        # inputs; keep the inner Sequential and manage batch dims explicitly.
+        self.conv = getattr(conv, "module", conv)
+        self.head = nn.Sequential(
+            nn.LazyLinear(int(feature_dim)),
+            nn.Mish(),
+            nn.LayerNorm(int(feature_dim)),
+        )
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        if image.ndim < 3:
+            raise ValueError(f"DepthEncoder expects [..., C, H, W], got {tuple(image.shape)}")
+        lead = image.shape[:-3]
+        x = image.reshape(-1, *image.shape[-3:])
+        if not torch.is_floating_point(x):
+            x = x.to(torch.float32) * self.input_scale
+        elif self.input_scale != 1.0 and image.dtype == torch.uint8:
+            x = x * self.input_scale
+        features = self.head(self.conv(x))
+        return features.reshape(*lead, features.shape[-1])
 
 
 @torch.no_grad()
