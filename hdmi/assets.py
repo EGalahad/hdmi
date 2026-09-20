@@ -98,6 +98,7 @@ def _make_suitcase_spec(
         mesh="suitcase_mesh",
         mass=str(float(mass)),
         rgba=" ".join(str(float(value)) for value in rgba),
+        group="2",
     )
     return mujoco.MjSpec.from_string(ET.tostring(mjcf, encoding="unicode"))
 
@@ -350,6 +351,7 @@ def _dataset_variant(
             rgba=" ".join(str(float(value)) for value in rgba),
             contype="0",
             conaffinity="0",
+            group="2",
         )
         ET.SubElement(
             runtime_body,
@@ -359,6 +361,7 @@ def _dataset_variant(
             mesh="object_collision_mesh",
             mass=str(collision_mass),
             rgba="0 0 0 0",
+            group="3",
             contype="1",
             conaffinity="1",
             condim="3",
@@ -376,6 +379,7 @@ def _dataset_variant(
             mass=str(ballast_mass),
             density="0",
             rgba="0 0 0 0",
+            group="3",
             contype="0",
             conaffinity="0",
         )
