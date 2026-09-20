@@ -100,3 +100,32 @@ bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
 
 The motion config uses public `hf://` dataset references, so a fresh checkout
 does not depend on a sibling private dataset directory.
+
+## Head depth camera and camera-realistic point cloud
+
+Two additional object-perception inputs for the five-object task, both fed by one
+scene-owned depth+segmentation camera on `torso_link` at the G1 head position
+(`sensors.head_camera`, factory `hdmi_head_camera`, 64x48, fovy 58 deg, level by
+default; the real G1 D435 is tilted down 47.6 deg, set `pitch_down_deg`).
+
+| task | object input | exp preset |
+|---|---|---|
+| `omomo-rigid5-pcd-only` | 256 uniform mesh surface points (noise-free) | `hdmi/pcd8k` |
+| `omomo-rigid5-pcd-camera` | `hdmi.object_pcd_camera`: object mask from the renderer's segmentation (a stand-in for a detector), mask erosion/dilation, pixel dropout, false-negative frames, depth noise + quantisation, extrinsic jitter, unprojected and expressed in the robot projected-yaw frame, fixed 256 points, plus `object_pcd_valid` | `hdmi/pcdcam8k` |
+| `omomo-rigid5-depth` | `hdmi.head_depth`: normalised uint8 depth image `[1, 48, 64]` -> CNN (`DepthEncoder`) | `hdmi/depth8k` |
+| `omomo-rigid5-pcd-camera-depth` | both | `hdmi/pcdcam-depth8k` |
+
+`algo=hdmi_ppo` now owns one encoder per exteroceptive group (`use_object_pcd`,
+`use_depth`); features are appended to the actor and critic inputs and the encoders
+are part of the exported deploy policy. Old `pcd8k` checkpoints load through a
+compatibility shim. `variant/pcd-teacher.yaml` adds the noise-free cloud as an extra
+group (`object_pcd_gt`) for an asymmetric critic or distillation teacher.
+
+Camera convention: MuJoCo cameras look along `-Z` with `+Y` up; a pixel `(u, v)` at
+planar depth `z` unprojects to `((u+0.5-cx)/fx z, -(v+0.5-cy)/fy z, -z)` with
+`fy = (H/2)/tan(fovy/2)`. Sanity-check the mount, mask and unprojection with
+
+```bash
+uv run --project venv/mjlab python projects/hdmi/scripts/check_head_camera.py \
+  task=omomo-rigid5-pcd-camera +exp=hdmi/pcdcam8k task.num_envs=4 +out_dir=/tmp/head_camera
+```
