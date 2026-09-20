@@ -105,8 +105,9 @@ does not depend on a sibling private dataset directory.
 
 Two additional object-perception inputs for the five-object task, both fed by one
 scene-owned depth+segmentation camera on `torso_link` at the G1 head position
-(`sensors.head_camera`, factory `hdmi_head_camera`, 64x48, fovy 58 deg, level by
-default; the real G1 D435 is tilted down 47.6 deg, set `pitch_down_deg`).
+(`sensors.head_camera`, factory `hdmi_head_camera`, 64x48, fovy 58 deg, tilted down
+47.6 deg like the real G1 D435; `pitch_down_deg: 0` gives a level camera, which sees
+the object in only ~51% of steps instead of ~96%).
 
 | task | object input | exp preset |
 |---|---|---|

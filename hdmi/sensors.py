@@ -12,7 +12,7 @@ Task YAML::
         _target_: hdmi_head_camera
         body_name: torso_link
         pos: [0.0576, 0.0175, 0.4299]
-        pitch_down_deg: 0.0
+        pitch_down_deg: 47.6
         fovy: 58.0
         width: 64
         height: 48
@@ -57,7 +57,7 @@ def head_camera(
     *,
     body_name: str = "torso_link",
     pos: Sequence[float] = (0.0576, 0.0175, 0.4299),
-    pitch_down_deg: float = 0.0,
+    pitch_down_deg: float = 47.6,
     fovy: float = 58.0,
     width: int = 64,
     height: int = 48,
@@ -70,7 +70,9 @@ def head_camera(
 
     ``pos`` is the camera origin in the parent body frame (metres); the default is
     the Unitree G1 D435 mount on ``torso_link``. ``pitch_down_deg`` tilts the optical
-    axis below the body +X axis (the real G1 camera is tilted ~47.6 deg).
+    axis below the body +X axis; the default matches the real G1 camera (47.6 deg down).
+    Measured on the rigid5 task (256 envs): the object is visible from the level camera
+    in ~51% of steps, from the 47.6 deg camera in ~96%.
     """
     if backend != "mjlab":
         raise NotImplementedError("hdmi_head_camera currently supports only the MjLab backend")

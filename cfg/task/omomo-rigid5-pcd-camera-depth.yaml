@@ -16,7 +16,7 @@ sensors:
     _target_: hdmi_head_camera
     body_name: torso_link
     pos: [0.0576, 0.0175, 0.4299]
-    pitch_down_deg: 0.0        # real G1 D435 tilt: 47.6
+    pitch_down_deg: 47.6       # Unitree G1 D435 tilt; 0 = level
     fovy: 58.0
     width: 64
     height: 48
