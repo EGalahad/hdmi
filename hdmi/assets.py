@@ -169,7 +169,12 @@ def _dataset_variant(
         sep=" ",
     )
 
-    mesh = trimesh.load(mesh_path, force="mesh", process=False)
+    # HF snapshot paths are extensionless blobs; retain the source MJCF suffix
+    # so trimesh can select the correct loader.
+    mesh_suffix = Path(source_mesh.get("file", "")).suffix.lstrip(".") or None
+    mesh = trimesh.load(
+        mesh_path, file_type=mesh_suffix, force="mesh", process=False
+    )
     vertices = np.asarray(mesh.vertices) * scale
     points, _ = trimesh.sample.sample_surface(mesh, 256, seed=0)
     points = points * scale
