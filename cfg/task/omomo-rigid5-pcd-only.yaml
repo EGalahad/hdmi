@@ -4,6 +4,7 @@ defaults:
   - hdmi-base
   - variant: root-aware-global
   - _self_
+  - patches: v1_1
   - override object: omomo-rigid5
   - override motion: g1/omomo-rigid5
   - override observation/command: root_joint
