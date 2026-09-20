@@ -24,6 +24,17 @@ def _resolve_dataset_root(path: str | Path) -> Path:
     return root
 
 
+def _mesh_path_with_source_suffix(path: Path, source_file: str) -> Path:
+    """Give content-addressed HF blobs the suffix required by MuJoCo."""
+    suffix = Path(source_file).suffix
+    if not suffix or path.suffix.lower() == suffix.lower():
+        return path
+    suffixed = Path(f"{path}{suffix}")
+    if not suffixed.exists():
+        suffixed.symlink_to(path)
+    return suffixed
+
+
 def _make_suitcase_spec(
     dataset_root: str | Path,
     *,
@@ -38,7 +49,10 @@ def _make_suitcase_spec(
     mesh = combined_root.find("./asset/mesh[@name='suitcase_mesh']")
     if mesh is None:
         raise ValueError("Dataset MJCF is missing asset mesh 'suitcase_mesh'")
-    mesh_path = (root / "meshes" / mesh.attrib["file"]).absolute()
+    mesh_file = mesh.attrib["file"]
+    mesh_path = _mesh_path_with_source_suffix(
+        (root / "meshes" / mesh_file).absolute(), mesh_file
+    )
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)
 
@@ -150,7 +164,10 @@ def _dataset_variant(
         raise ValueError(f"{mjcf_path} is missing object mesh asset")
     compiler = combined.find("compiler")
     mesh_dir = compiler.get("meshdir", "") if compiler is not None else ""
-    mesh_path = (mjcf_path.parent / mesh_dir / source_mesh.get("file", "")).resolve()
+    source_mesh_file = source_mesh.get("file", "")
+    mesh_path = _mesh_path_with_source_suffix(
+        (mjcf_path.parent / mesh_dir / source_mesh_file).resolve(), source_mesh_file
+    )
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)
     scale = np.fromstring(source_mesh.get("scale", "1 1 1"), sep=" ")
