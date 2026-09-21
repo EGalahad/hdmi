@@ -189,7 +189,7 @@ def _dataset_variant(
     mesh_dir = compiler.get("meshdir", "") if compiler is not None else ""
     source_mesh_file = source_mesh.get("file", "")
     mesh_path = _mesh_path_with_source_suffix(
-        (mjcf_path.parent / mesh_dir / source_mesh_file).resolve(), source_mesh_file
+        (mjcf_path.parent / mesh_dir / source_mesh_file).absolute(), source_mesh_file
     )
     if not mesh_path.is_file():
         raise FileNotFoundError(mesh_path)

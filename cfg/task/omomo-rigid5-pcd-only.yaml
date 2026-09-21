@@ -10,6 +10,8 @@ defaults:
   - override observation/command: root_joint
 
 name: G1TrackHDMIOmomoRigid5PCDOnly
+command:
+  motion_palm_frames: true
 
 observation:
   object_pcd:

@@ -11,6 +11,9 @@ defaults:
 
 name: G1TrackHDMIOmomoRigid5PCDCameraDepth
 
+command:
+  motion_palm_frames: true
+
 sensors:
   head_camera:
     _target_: hdmi_head_camera

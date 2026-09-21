@@ -1,0 +1,64 @@
+# @package task
+# Recipe of the published five-object PCD-only checkpoint
+# (W&B elijahgalahad/mimic_lite/xst5d0hu, run "589-hdmi-rigid5-pcd-only-16k", 2026-09-18),
+# reconstructed from that run's cfg.yaml so new runs can be compared against it:
+# pre-v1.1 tracking (wrist_yaw keypoints instead of palm links, T8 future window, larger
+# reference noise), object rewards `*_local_exp` with sigma 0.5 and the 0.5 m / 0.8 rad object
+# termination thresholds. Use it instead of the v1.1 patch:
+#   task=omomo-rigid5-pcd-only task/patches=public-ckpt-589
+# It also disables the derived palm-frame datasets (the public run used the plain HF datasets).
+shared:
+  reward_body_names: &bodies
+    - pelvis
+    - torso_link
+    - .*_hip_yaw_link
+    - .*_knee_link
+    - .*_toe_link
+    - .*_shoulder_yaw_link
+    - .*_elbow_link
+    - .*_wrist_yaw_link
+command:
+  tracking_body_names: *bodies
+  motion_palm_frames: false
+_priv_bodies: &priv_bodies
+  - pelvis
+  - torso_link
+  - .*_hip_yaw_link
+  - .*_knee_link
+  - .*_toe_link
+  - .*_shoulder_yaw_link
+  - .*_elbow_link
+  - .*_wrist_yaw_link
+  - object
+observation:
+  priv:
+    # run 589 left body_names unset -> all tracked bodies including the object (15 bodies, priv = 580)
+    body_spatial_error_local:
+      body_names: *priv_bodies
+    diff_body_lin_vel_future:
+      body_names: *priv_bodies
+    diff_body_ang_vel_future:
+      body_names: *priv_bodies
+  command:
+    ref_root_ori_future_b:
+      noise_std: 0.05
+    ref_joint_pos_future:
+      noise_std: 0.0
+  policy:
+    joint_pos_history:
+      noise_std: 0.02
+    projected_gravity_history:
+      bias_noise_std: 0.0
+reward:
+  object_tracking:
+    body_pos:
+      _target_: mimic_lite.body_pos_local_exp
+      sigma: 0.5
+    body_ori:
+      _target_: mimic_lite.body_ori_local_exp
+      sigma: 0.5
+termination:
+  object_pos_error:
+    threshold: 0.5
+  object_ori_error:
+    threshold: 0.8
