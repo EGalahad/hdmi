@@ -107,3 +107,13 @@ copy of each public combined robot/object dataset with massless palm frames at
 The changed FK model gets its own cache key; the original HF snapshot is never
 modified. Derived datasets live in `~/.cache/hdmi/palm-datasets` (override with
 `HDMI_DATASET_CACHE`). DDP ranks share a file lock while preparing each copy.
+
+The September 21 run's exact source commits, dataset/asset revisions, package
+versions and launch settings are recorded in
+[`reproduction/rigid5-pcd8k-20260921.json`](reproduction/rigid5-pcd8k-20260921.json).
+For an exact reproduction, check out those commits (including `any4hdmi`) and
+use the recorded HF revisions instead of floating `main`. On 24 GiB GPUs, set
+`PYTORCH_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8`
+to allow PyTorch and Warp to share device memory. Headless runs can use
+`MUJOCO_GL=disable`; cache preparation can use
+`ANY4HDMI_CACHE_BUILD_NUM_WORKERS=0`.
