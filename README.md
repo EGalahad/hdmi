@@ -95,7 +95,7 @@ export ANY4HDMI_CACHE_BUILD_BATCH_SIZE=4096
 bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   projects/mimic-lite/scripts/train.py venv/mjlab \
   task=omomo-rigid5-pcd-only \
-  +exp=hdmi/pcd8k
+  +exp=hdmi/pcd8k +task.sim.nconmax=128
 ```
 
 The motion config uses public `hf://` dataset references, so a fresh checkout
@@ -114,6 +114,7 @@ versions and launch settings are recorded in
 For an exact reproduction, check out those commits (including `any4hdmi`) and
 use the recorded HF revisions instead of floating `main`. On 24 GiB GPUs, set
 `PYTORCH_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8`
-to allow PyTorch and Warp to share device memory. Headless runs can use
+and `+task.sim.nconmax=128` to keep PyTorch and Warp within the device memory
+budget (the constraint capacity remains 500). Headless runs can use
 `MUJOCO_GL=disable`; cache preparation can use
 `ANY4HDMI_CACHE_BUILD_NUM_WORKERS=0`.

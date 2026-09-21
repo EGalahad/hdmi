@@ -48,6 +48,7 @@
     "task=omomo-rigid5-pcd-only",
     "+exp=hdmi/pcd8k",
     "task.num_envs=8192",
+    "+task.sim.nconmax=128",
     "total_iters=8000",
     "wandb.mode=offline"
   ]
