@@ -100,3 +100,10 @@ bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
 
 The motion config uses public `hf://` dataset references, so a fresh checkout
 does not depend on a sibling private dataset directory.
+
+This task enables `task.command.motion_palm_frames=true`: HDMI derives a local
+copy of each public combined robot/object dataset with massless palm frames at
+`[0.1, 0, 0]` relative to each wrist-yaw body. Motion samples are unchanged.
+The changed FK model gets its own cache key; the original HF snapshot is never
+modified. Derived datasets live in `~/.cache/hdmi/palm-datasets` (override with
+`HDMI_DATASET_CACHE`). DDP ranks share a file lock while preparing each copy.
