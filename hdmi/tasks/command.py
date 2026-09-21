@@ -79,8 +79,12 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         object_tracking_body_names: list[str],
         object_tracking_joint_names: list[str] | None = None,
         call_update: bool = True,
+        motion_palm_frames: bool = False,
         **kwargs,
     ) -> None:
+        if motion_palm_frames:
+            from hdmi.palm_dataset import palm_motion_configs
+            kwargs["motion_cfgs"] = palm_motion_configs(kwargs["motion_cfgs"])
         self.object_name = object_name
         self.object_root_body_name = object_root_body_name
         self._object_tracking_body_names_cfg = list(object_tracking_body_names)
