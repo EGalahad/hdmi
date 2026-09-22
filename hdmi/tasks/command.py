@@ -233,6 +233,7 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self.tracking_joint_indices_motion.extend(
             self.object_tracking_joint_indices_motion
         )
+        self._cache_motion_indices()
 
         if self._hdmi_call_update:
             self._read_current_robot_state()
