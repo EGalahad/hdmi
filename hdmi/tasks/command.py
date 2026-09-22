@@ -211,6 +211,9 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         self.object_tracking_body_names = object_body_names
         self.object_tracking_joint_names = object_joint_names
         self.object_tracking_body_indices_asset = object_body_ids
+        self._object_tracking_body_indices_device = torch.as_tensor(
+            object_body_ids, dtype=torch.long, device=self.device
+        )
         self.object_tracking_joint_indices_asset = object_joint_ids
         self.object_tracking_body_indices_motion = [
             self.dataset.body_names.index(name) for name in object_body_names
@@ -239,7 +242,7 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
     def _read_current_robot_state(self) -> None:
         super()._read_current_robot_state()
         data = self.object.data
-        ids = self.object_tracking_body_indices_asset
+        ids = self._object_tracking_body_indices_device
         self.robot_body_link_pos_w = torch.cat(
             [self.robot_body_link_pos_w, data.body_link_pos_w[:, ids]], dim=1
         )
