@@ -1,0 +1,88 @@
+[
+  {
+    "repo": "elijahgalahad/any4hdmi-g1-omomo-suitcase",
+    "revision": "d220fde1dd96ff3caf4a45395c436bf223ee8b4b",
+    "mjcf": "g1-suitcase.xml",
+    "sha256": "29aed9f327f708507ce992ebb5e958e2bd523b12015b39d4bb17d8c6ecf18823",
+    "changed_paths": [
+      "g1-suitcase.xml",
+      "manifest.json",
+      "meshes/left_wrist_pitch_link_5010.STL",
+      "meshes/left_wrist_roll_link_5010.STL",
+      "meshes/left_wrist_yaw_link_5010.STL",
+      "meshes/right_wrist_pitch_link_5010.STL",
+      "meshes/right_wrist_roll_link_5010.STL",
+      "meshes/right_wrist_yaw_link_5010.STL",
+      "object.xml",
+      "object-single.xml"
+    ]
+  },
+  {
+    "repo": "elijahgalahad/any4hdmi-g1-omomo-largebox",
+    "revision": "20c64b7bf50cf337d0f48eef264eddf7bdfabb80",
+    "mjcf": "g1-largebox.xml",
+    "sha256": "65469fdd2e6ff55ba32e484d4e13b8955d0ec2243c6b04eef18d782692d33f77",
+    "changed_paths": [
+      "g1-largebox.xml",
+      "manifest.json",
+      "meshes/left_wrist_pitch_link_5010.STL",
+      "meshes/left_wrist_roll_link_5010.STL",
+      "meshes/left_wrist_yaw_link_5010.STL",
+      "meshes/right_wrist_pitch_link_5010.STL",
+      "meshes/right_wrist_roll_link_5010.STL",
+      "meshes/right_wrist_yaw_link_5010.STL",
+      "object.xml"
+    ]
+  },
+  {
+    "repo": "elijahgalahad/any4hdmi-g1-omomo-smallbox",
+    "revision": "170d61ff59c248e5fc427de2d80b01aed68d07f9",
+    "mjcf": "g1-smallbox.xml",
+    "sha256": "9a05124d8034d310c8e9cadd4cb6258e3c4d0f066da3b18c061247916d59d520",
+    "changed_paths": [
+      "g1-smallbox.xml",
+      "manifest.json",
+      "meshes/left_wrist_pitch_link_5010.STL",
+      "meshes/left_wrist_roll_link_5010.STL",
+      "meshes/left_wrist_yaw_link_5010.STL",
+      "meshes/right_wrist_pitch_link_5010.STL",
+      "meshes/right_wrist_roll_link_5010.STL",
+      "meshes/right_wrist_yaw_link_5010.STL",
+      "object.xml"
+    ]
+  },
+  {
+    "repo": "elijahgalahad/any4hdmi-g1-omomo-plasticbox",
+    "revision": "1bded427bf61ef90f170da80f391375f7ba47dc6",
+    "mjcf": "g1-plasticbox.xml",
+    "sha256": "856b816e8972db114c9676f36c1818f304cbb500596a4a1cd935170a073145e1",
+    "changed_paths": [
+      "g1-plasticbox.xml",
+      "manifest.json",
+      "meshes/left_wrist_pitch_link_5010.STL",
+      "meshes/left_wrist_roll_link_5010.STL",
+      "meshes/left_wrist_yaw_link_5010.STL",
+      "meshes/right_wrist_pitch_link_5010.STL",
+      "meshes/right_wrist_roll_link_5010.STL",
+      "meshes/right_wrist_yaw_link_5010.STL",
+      "object.xml"
+    ]
+  },
+  {
+    "repo": "elijahgalahad/any4hdmi-g1-omomo-trashcan",
+    "revision": "23ef9499e076b336073aef473822e4361ea6c243",
+    "mjcf": "g1-trashcan.xml",
+    "sha256": "8179084f2e344ecbeac0c204b86f13af63ab765d27e1c01c6daf1e111544f871",
+    "changed_paths": [
+      "g1-trashcan.xml",
+      "manifest.json",
+      "meshes/left_wrist_pitch_link_5010.STL",
+      "meshes/left_wrist_roll_link_5010.STL",
+      "meshes/left_wrist_yaw_link_5010.STL",
+      "meshes/right_wrist_pitch_link_5010.STL",
+      "meshes/right_wrist_roll_link_5010.STL",
+      "meshes/right_wrist_yaw_link_5010.STL",
+      "object.xml"
+    ]
+  }
+]

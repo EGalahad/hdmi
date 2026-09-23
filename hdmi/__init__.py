@@ -1,4 +1,4 @@
-from .assets import make_object_mesh_variants, make_suitcase_mesh
+from .assets import make_object_mesh_variants, make_object_asset
 from .tasks import (
     RobotObjectTracking,
     object_category,
@@ -10,7 +10,7 @@ from .tasks import (
 __all__ = [
     "RobotObjectTracking",
     "make_object_mesh_variants",
-    "make_suitcase_mesh",
+    "make_object_asset",
     "object_category",
     "object_motion_progress",
     "object_pose_local",

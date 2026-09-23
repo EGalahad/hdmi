@@ -53,68 +53,41 @@ through its `hf://` URI and reuses the standard Hugging Face cache.
 
 ## Train
 
-Train the verified G1 suitcase policy for 4,000 iterations on one 8-GPU node:
+### Suitcase object-pose — 4,000 iterations
 
 ```bash
-bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
+PYTORCH_ALLOC_CONF=expandable_segments:True bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   projects/mimic-lite/scripts/train.py venv/mjlab \
-  task=omomo-suitcase-object-pose \
-  +exp=hdmi/ppo
+  task=omomo-suitcase-object-pose +exp=hdmi/ppo
 ```
 
-The preset selects one suitcase entity per environment, feeds its local pose to
-the policy as `object_pose_local`, and tracks the accepted OMOMO suitcase
-motions. Each GPU runs 8,192 environments; checkpoints are written every 1,000
-of the 4,000 iterations. Change `task/object` and `task/motion` together when
-training another paired robot-object dataset.
+### Five-object PCD-only — 8,000 iterations
+
+```bash
+PYTORCH_ALLOC_CONF=expandable_segments:True bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
+  projects/mimic-lite/scripts/train.py venv/mjlab \
+  task=omomo-rigid5-pcd-only +exp=hdmi/pcd8k
+```
 
 ## Play
 
-Play a W&B checkpoint:
+The viewer displays 16 environments; the five-object task includes all five
+object categories.
+
+### Suitcase object-pose
 
 ```bash
 uv run --project venv/mjlab projects/mimic-lite/scripts/play.py \
-  task=omomo-suitcase-object-pose \
-  algo=from_checkpoint \
-  checkpoint_path=run:elijahgalahad/mimic_lite/nnds9gg2:4000
+  task=omomo-suitcase-object-pose algo=from_checkpoint \
+  checkpoint_path=run:elijahgalahad/mimic_lite/nnds9gg2:4000 \
+  task.num_envs=16 task.termination.root_pos_error.enabled=false
 ```
 
-The Viser viewer displays translucent reference meshes for both the robot and
-the object.
-
-## Five-rigid PCD-only reproduction
-
-The public five-category PCD-only task uses the five accepted OMOMO datasets,
-256 object points, and the PCD encoder. Run the 8,000-iteration reproduction
-on one eight-GPU node with:
+### Five-object PCD-only
 
 ```bash
-export ANY4HDMI_CACHE_BUILD_LOADER_BATCH_SIZE=1
-export ANY4HDMI_CACHE_BUILD_BATCH_SIZE=4096
-
-bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
-  projects/mimic-lite/scripts/train.py venv/mjlab \
-  task=omomo-rigid5-pcd-only \
-  +exp=hdmi/pcd8k +task.sim.nconmax=128
+uv run --project venv/mjlab projects/mimic-lite/scripts/play.py \
+  task=omomo-rigid5-pcd-only algo=from_checkpoint \
+  checkpoint_path=run:elijahgalahad/mimic_lite/ls05op22:8000 \
+  task.num_envs=16 task.termination.root_pos_error.enabled=false
 ```
-
-The motion config uses public `hf://` dataset references, so a fresh checkout
-does not depend on a sibling private dataset directory.
-
-This task enables `task.command.motion_palm_frames=true`: HDMI derives a local
-copy of each public combined robot/object dataset with massless palm frames at
-`[0.1, 0, 0]` relative to each wrist-yaw body. Motion samples are unchanged.
-The changed FK model gets its own cache key; the original HF snapshot is never
-modified. Derived datasets live in `~/.cache/hdmi/palm-datasets` (override with
-`HDMI_DATASET_CACHE`). DDP ranks share a file lock while preparing each copy.
-
-The September 21 run's exact source commits, dataset/asset revisions, package
-versions and launch settings are recorded in
-[`reproduction/rigid5-pcd8k-20260921.json`](reproduction/rigid5-pcd8k-20260921.json).
-For an exact reproduction, check out those commits (including `any4hdmi`) and
-use the recorded HF revisions instead of floating `main`. On 24 GiB GPUs, set
-`PYTORCH_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8`
-and `+task.sim.nconmax=128` to keep PyTorch and Warp within the device memory
-budget (the constraint capacity remains 500). Headless runs can use
-`MUJOCO_GL=disable`; cache preparation can use
-`ANY4HDMI_CACHE_BUILD_NUM_WORKERS=0`.

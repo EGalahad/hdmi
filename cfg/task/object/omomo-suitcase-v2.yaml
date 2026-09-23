@@ -1,12 +1,14 @@
 # @package task
 
+robot:
+  name: hdmi_robot_from_motion
+  dataset_root: ${task.objects.object.dataset_root}
+  mode: 15
+
 objects:
   object:
-    _target_: hdmi_suitcase_mesh
+    _target_: hdmi_object_asset
     dataset_root: "hf://elijahgalahad/any4hdmi-g1-omomo-suitcase"
-    name: object
-    mass: 2.0
-    rgba: [0.4, 0.3, 0.2, 1.0]
 
 command:
   object_name: object

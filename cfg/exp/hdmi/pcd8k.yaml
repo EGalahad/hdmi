@@ -16,3 +16,13 @@ algo:
   object_reward_scale: 1.0
   grad_accum_steps: 1
   value_chunk_size: 16384
+
+task:
+  sim:
+    nconmax: 128
+  reward:
+    object_tracking:
+      body_pos:
+        sigma: 0.5
+      body_ori:
+        sigma: 0.5

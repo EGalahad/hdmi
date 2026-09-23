@@ -5,4 +5,5 @@ __pycache__/
 outputs/
 wandb/
 /scripts/experiments/
-/tests/
+/tests/*
+!/tests/test_object_variants.py

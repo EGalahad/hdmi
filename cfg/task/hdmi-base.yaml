@@ -36,6 +36,18 @@ reward:
       body_names: ${task.command.object_tracking_body_names}
       weight: 1.0
       sigma: 0.4
+  object_error:
+    _enabled_: false
+    body_pos:
+      _target_: mimic_lite.body_pos_error_local
+      body_names: ${task.command.object_tracking_body_names}
+      weight: 1.0
+      enabled: false
+    body_ori:
+      _target_: mimic_lite.body_ori_error_local
+      body_names: ${task.command.object_tracking_body_names}
+      weight: 1.0
+      enabled: false
 
 termination:
   object_pos_error:
