@@ -23,6 +23,8 @@ task:
   reward:
     object_tracking:
       body_pos:
+        _target_: mimic_lite.body_pos_local_exp
         sigma: 0.5
       body_ori:
+        _target_: mimic_lite.body_ori_local_exp
         sigma: 0.5

@@ -1,0 +1,23 @@
+{
+  "run": "https://wandb.ai/elijahgalahad/mimic_lite/runs/ls05op22",
+  "checkpoint": "checkpoint_8000.pt",
+  "task": "omomo-rigid5-pcd-only",
+  "experiment": "hdmi/pcd8k",
+  "world_size": 8,
+  "num_envs_per_rank": 8192,
+  "total_iters": 8000,
+  "seed": 0,
+  "nconmax": 128,
+  "object_reward": {
+    "position": {"target": "mimic_lite.body_pos_local_exp", "weight": 1.0, "sigma": 0.5},
+    "orientation": {"target": "mimic_lite.body_ori_local_exp", "weight": 1.0, "sigma": 0.5}
+  },
+  "training_dataset_revisions": {
+    "suitcase": "169c2cbdc5a8b796f3b633e6e01d831030d4ce15",
+    "largebox": "d96e28910e22b3c43a8d6d01998a436071a0ff3d",
+    "smallbox": "928e8d15d4fd5f5953cec64145394c46826dbb52",
+    "plasticbox": "214573f449335238d2daa09266bea8dc74463c00",
+    "trashcan": "1c68a6c4ff8c1c37fd82c0ece99dfe49b64c9a7c"
+  },
+  "model_note": "The released HDMI preset retains these reward and training settings. The historical run used the pre-migration robot and generated object assets; current main uses the canonical Mimic-Lite 1.1 robot and object subtrees baked into combined MJCF datasets. Re-running the preset on current main therefore changes the physical model."
+}
