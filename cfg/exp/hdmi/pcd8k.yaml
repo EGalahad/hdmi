@@ -4,7 +4,7 @@ defaults:
   - /algo/ppo/module: large
   - override /algo: hdmi_ppo
 
-exp_name: hdmi-rigid5-pcd-only-8k
+exp_name: hdmi-rigid5-pcd-only-local-sigma05-8k
 seed: 0
 total_iters: 8000
 checkpoint_interval: 1000
@@ -16,15 +16,3 @@ algo:
   object_reward_scale: 1.0
   grad_accum_steps: 1
   value_chunk_size: 16384
-
-task:
-  sim:
-    nconmax: 128
-  reward:
-    object_tracking:
-      body_pos:
-        _target_: mimic_lite.body_pos_local_exp
-        sigma: 0.5
-      body_ori:
-        _target_: mimic_lite.body_ori_local_exp
-        sigma: 0.5

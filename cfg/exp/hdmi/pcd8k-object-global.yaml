@@ -18,13 +18,9 @@ algo:
   value_chunk_size: 16384
 
 task:
-  sim:
-    nconmax: 128
   reward:
     object_tracking:
       body_pos:
         _target_: mimic_lite.body_pos_exp
-        sigma: 0.5
       body_ori:
         _target_: mimic_lite.body_ori_exp
-        sigma: 0.5

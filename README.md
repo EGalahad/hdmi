@@ -64,7 +64,7 @@ PYTORCH_ALLOC_CONF=expandable_segments:True bash scripts/launch_ddp.sh 0,1,2,3,4
 ### Five-object PCD-only — 8,000 iterations
 
 ```bash
-PYTORCH_ALLOC_CONF=expandable_segments:True bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
+PYTORCH_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8 bash scripts/launch_ddp.sh 0,1,2,3,4,5,6,7 \
   projects/mimic-lite/scripts/train.py venv/mjlab \
   task=omomo-rigid5-pcd-only +exp=hdmi/pcd8k
 ```
