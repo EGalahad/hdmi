@@ -6,6 +6,12 @@ defaults:
 
 exp_name: hdmi-ppo
 seed: 0
-total_iters: 4000
 checkpoint_interval: 1000
 upload_interval: 1000
+
+algo:
+  entropy_coef_start: 0.008
+  entropy_coef_end: 0.001
+  entropy_decay_start: 0.6
+  entropy_decay_end: 1.0
+  normalize_before_sum: false

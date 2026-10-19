@@ -1,0 +1,47 @@
+# @package task
+
+defaults:
+  - omomo-rigid5-pcd-only
+  - _self_
+  - override object: weave9
+  - override motion: g1/weave-reference
+
+name: G1InspireTrackHDMIWeavePCDOnly
+
+shared:
+  tracking_joint_names:
+    - waist_.*_joint
+    - .*_hip_.*_joint
+    - .*_knee_joint
+    - .*_ankle_.*_joint
+    - .*_shoulder_.*_joint
+    - .*_elbow_joint
+    - .*_wrist_.*_joint
+    - '[LR]_.*_joint'
+  reward_joint_names:
+    - waist_.*_joint
+    - .*_hip_.*_joint
+    - .*_knee_joint
+    - .*_shoulder_.*_joint
+    - .*_elbow_joint
+    - .*_wrist_.*_joint
+    - '[LR]_.*_joint'
+
+input:
+  action:
+    _target_: hdmi.InspireJointPosition
+    action_scaling:
+      '[LR]_(thumb_proximal_(yaw|pitch)|(index|middle|ring|pinky)_proximal)_joint': 1.0
+    mimic:
+      L_thumb_intermediate_joint: [L_thumb_proximal_pitch_joint, 1.6, 0.0]
+      L_thumb_distal_joint: [L_thumb_proximal_pitch_joint, 2.4, 0.0]
+      L_index_intermediate_joint: [L_index_proximal_joint, 1.0, 0.0]
+      L_middle_intermediate_joint: [L_middle_proximal_joint, 1.0, 0.0]
+      L_ring_intermediate_joint: [L_ring_proximal_joint, 1.0, 0.0]
+      L_pinky_intermediate_joint: [L_pinky_proximal_joint, 1.0, 0.0]
+      R_thumb_intermediate_joint: [R_thumb_proximal_pitch_joint, 1.6, 0.0]
+      R_thumb_distal_joint: [R_thumb_proximal_pitch_joint, 2.4, 0.0]
+      R_index_intermediate_joint: [R_index_proximal_joint, 1.0, 0.0]
+      R_middle_intermediate_joint: [R_middle_proximal_joint, 1.0, 0.0]
+      R_ring_intermediate_joint: [R_ring_proximal_joint, 1.0, 0.0]
+      R_pinky_intermediate_joint: [R_pinky_proximal_joint, 1.0, 0.0]

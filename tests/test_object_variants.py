@@ -11,7 +11,7 @@ from mjlab.entity.variants import build_merged_variant_spec
 def _dataset(root: Path, size: float, mass: float):
     root.mkdir()
     trimesh.creation.box((size, size, size)).export(root / 'visual.obj')
-    (root / 'manifest.json').write_text(json.dumps({'format_version': 2, 'mjcf': 'object.xml'}))
+    (root / 'manifest.json').write_text(json.dumps({'format_version': 2, 'mjcf': 'object.xml', 'object_name': 'actual-' + root.name}))
     (root / 'object.xml').write_text(f'''<mujoco>
       <asset><mesh name="visual" file="visual.obj"/></asset>
       <worldbody><body name="object"><freejoint name="object_root"/>
@@ -28,6 +28,7 @@ def test_prebuilt_variants_preserve_physics_points_and_assignment(tmp_path):
         'b': {'path': str(second), 'weight': 3}}, seed=7)
     cfg, again = make_object_mesh_variants(**kwargs), make_object_mesh_variants(**kwargs)
     assert cfg.variant_masses == {'a': 1, 'b': 4}
+    assert cfg.object_names == {'a': 'actual-a', 'b': 'actual-b'}
     np.testing.assert_array_equal(cfg.assignment(8192), again.assignment(8192))
     np.testing.assert_allclose(np.bincount(cfg.assignment(8192))/8192, [.25,.75], atol=.02)
     for name, root, bound in [('a', first, .5), ('b', second, 1)]:

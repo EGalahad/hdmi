@@ -1,0 +1,37 @@
+# Copy this file to active-adaptation/venv/hdmi/pyproject.toml.
+[project]
+name = "hdmi-mjlab-env"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+    "active_adaptation", "mimic-lite", "mimic-hdmi",
+    "mjlab==1.6.0", "mujoco==3.11.0", "mujoco-warp==3.11.0",
+    "warp-lang==1.14.0", "torch==2.11.0", "torchvision==0.26.0",
+    "torchrl==0.13.1", "tensordict==0.13.0", "imageio[ffmpeg]",
+]
+
+[tool.uv]
+package = false
+override-dependencies = [
+    "any4hdmi @ git+https://github.com/EGalahad/any4hdmi.git@d5dff76034a6d63fe3dfd11297b3e58ad1acc33b",
+]
+
+[tool.uv.sources]
+mujoco = { index = "pypi-stable" }
+warp-lang = { index = "pypi-stable" }
+active_adaptation = { path = "../..", editable = true }
+mimic-lite = { path = "../../projects/mimic-lite", editable = true }
+mimic-hdmi = { path = "../../projects/hdmi", editable = true }
+mujoco-warp = { git = "https://github.com/EGalahad/mujoco_warp.git", rev = "0e5b5b5657f2c68e0d6c20c2ff0a7d355112e532" }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi-stable"
+url = "https://pypi.org/simple"
+explicit = true

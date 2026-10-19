@@ -1,0 +1,39 @@
+# @package task.command
+
+motion_cfgs:
+  clothesstand:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/clothesstand
+    weight: 0.1111111111111111
+    full_motion: true
+  floorlamp:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/floorlamp
+    weight: 0.1111111111111111
+    full_motion: true
+  largebox:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/largebox
+    weight: 0.1111111111111111
+    full_motion: true
+  largetable:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/largetable
+    weight: 0.1111111111111111
+    full_motion: true
+  smallbox:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/smallbox
+    weight: 0.1111111111111111
+    full_motion: true
+  smalltable:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/smalltable
+    weight: 0.1111111111111111
+    full_motion: true
+  tripod:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/tripod
+    weight: 0.1111111111111111
+    full_motion: true
+  whitechair:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/whitechair
+    weight: 0.1111111111111111
+    full_motion: true
+  woodchair:
+    path: hf://elijahgalahad/any4hdmi-g1-inspire-weave-reference-1605@c716c1e0e316b8688d3825ce9e60607b82ca90c6/woodchair
+    weight: 0.1111111111111111
+    full_motion: true

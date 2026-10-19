@@ -1,0 +1,31 @@
+# @package task
+defaults:
+  - weave-pcd-only
+  - _self_
+
+name: G1InspireTrackHDMIWeaveContactObservations
+command:
+  _target_: hdmi.ContactRobotObjectTracking
+  contact_future_steps: [0, 5, 10, 15, 20]
+
+sensors:
+  robot_object_contact:
+    _target_: contact_sensor
+    entity: robot
+    pattern: '.*'
+    secondary: object
+    track_air_time: false
+    history_length: 0
+    fields: [force, found]
+    reduce: netforce
+
+# Actor input only: no contact reward or lost-contact termination changes.
+observation:
+  command:
+    reference_contact_labels:
+      _target_: hdmi.reference_contact_labels
+  policy:
+    object_contact_flags:
+      _target_: hdmi.object_contact_flags
+      sensor_name: robot_object_contact
+      threshold: 1.0

@@ -6,13 +6,16 @@ defaults:
 
 exp_name: hdmi-rigid5-pcd-only-local-sigma05-8k
 seed: 0
-total_iters: 8000
 checkpoint_interval: 1000
 upload_interval: 1000
 
 algo:
+  entropy_coef_start: 0.008
+  entropy_coef_end: 0.001
+  entropy_decay_start: 0.6
+  entropy_decay_end: 1.0
   pcd_hidden_dims: [32, 64]
-  normalize_before_sum: true
+  normalize_before_sum: false
   object_reward_scale: 1.0
   grad_accum_steps: 1
   value_chunk_size: 16384

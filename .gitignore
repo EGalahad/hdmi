@@ -7,3 +7,4 @@ wandb/
 /scripts/experiments/
 /tests/*
 !/tests/test_object_variants.py
+!/tests/test_play_reset.py

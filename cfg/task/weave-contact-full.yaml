@@ -1,0 +1,12 @@
+# @package task
+defaults:
+  - weave-contact-reward
+  - _self_
+name: G1InspireTrackHDMIWeaveContactFull
+termination:
+  lost_expected_contact:
+    _target_: hdmi.lost_expected_contact
+    sensor_name: robot_object_contact
+    body_names: '[LR]_(thumb_(intermediate|distal)|(index|middle|ring|pinky)_intermediate)'
+    max_lost_frames: 10
+    threshold: 1.0

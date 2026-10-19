@@ -176,9 +176,9 @@ class PPOConfig:
     compile_rollout: bool = False
     compile_train_modules: bool = False
 
-    entropy_coef_start: float = 0.01
-    entropy_coef_end: float = 0.002
-    entropy_decay_start: float = 0.75
+    entropy_coef_start: float = 0.008
+    entropy_coef_end: float = 0.001
+    entropy_decay_start: float = 0.6
     entropy_decay_end: float = 1.0
     init_noise_scale: float = 1.0
     load_noise_scale: float | None = None

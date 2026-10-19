@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /exp/hdmi/pcd
+  - _self_
+exp_name: hdmi-weave-reference
+algo:
+  actor_hidden_dims: [512, 512, 512]
+  object_category_names: [clothesstand, floorlamp, largebox, largetable, smallbox, smalltable, tripod, whitechair, woodchair]

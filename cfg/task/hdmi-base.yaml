@@ -25,17 +25,21 @@ observation:
       _target_: mimic_lite.body_spatial_error_local
       body_names: ${task.command.object_tracking_body_names}
 reward:
+  loco:
+    action_rate_l2:
+      weight: 0.1
+      enabled: true
   object_tracking:
     body_pos:
-      _target_: mimic_lite.body_pos_local_exp
+      _target_: mimic_lite.body_pos_exp
       body_names: ${task.command.object_tracking_body_names}
       weight: 1.0
-      sigma: 0.3
+      sigma: 0.5
     body_ori:
-      _target_: mimic_lite.body_ori_local_exp
+      _target_: mimic_lite.body_ori_exp
       body_names: ${task.command.object_tracking_body_names}
       weight: 1.0
-      sigma: 0.4
+      sigma: 0.5
   object_error:
     _enabled_: false
     body_pos:
@@ -60,3 +64,9 @@ termination:
     body_names: ${task.command.object_tracking_body_names}
     min_steps: 5
     threshold: 1.2
+
+sim:
+  nconmax: 256
+  njmax: 1024
+  mjlab_nconmax: 256
+  mjlab_njmax: 1024

@@ -79,8 +79,10 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
         object_tracking_body_names: list[str],
         object_tracking_joint_names: list[str] | None = None,
         call_update: bool = True,
+        play_from_start: bool = True,
         **kwargs,
     ) -> None:
+        self.play_from_start = play_from_start
         self.object_name = object_name
         self.object_root_body_name = object_root_body_name
         self._object_tracking_body_names_cfg = list(object_tracking_body_names)
@@ -293,6 +295,22 @@ class RobotObjectTracking(RobotTracking, namespace="hdmi"):
                 joint_ids=self.object_tracking_joint_indices_asset,
                 env_ids=env_ids,
             )
+
+    @property
+    def object_names(self) -> tuple[str, ...]:
+        """Real object names for each environment; the scene entity stays `object`."""
+        labels = getattr(self.object.cfg, "object_names", {})
+        if self.object_variant_ids is None:
+            return (getattr(self.object.cfg, "object_name", self.object_name),) * self.num_envs
+        return tuple(labels.get(self.object_variant_names[i], self.object_variant_names[i])
+                     for i in self.object_variant_ids.cpu().tolist())
+
+    def _sample_motions(self, env_ids: torch.Tensor, *, terminated=None) -> None:
+        # eval()/play starts full motions; training retains its random/rewind sampler.
+        from_start = not self.env.training and self.play_from_start
+        super()._sample_motions(env_ids, terminated=None if from_start else terminated)
+        if from_start:
+            self.t[env_ids] = 0
 
     def sample_init(self, env_ids: torch.Tensor, reset_td=None) -> None:
         super().sample_init(env_ids, reset_td)

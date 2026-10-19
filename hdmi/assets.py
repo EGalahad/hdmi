@@ -84,8 +84,16 @@ def make_object_asset(backend: str, *, dataset_root: str | Path):
     if backend != "mjlab":
         raise NotImplementedError("Object assets currently require MjLab")
     from active_adaptation.assets.asset_cfg import EntityCfg
-    path = _dataset_xml(dataset_root)
-    return EntityCfg(init_state=EntityCfg.InitialStateCfg(),
+    root = _resolve_dataset_root(dataset_root)
+    path = _dataset_xml(root)
+    metadata = json.loads((root / "manifest.json").read_text())
+
+    @dataclass
+    class ObjectCfg(EntityCfg):
+        object_name: str = "object"
+
+    return ObjectCfg(init_state=ObjectCfg.InitialStateCfg(),
+                     object_name=str(metadata.get("object_name", root.name)),
                      spec_fn=lambda: _subtree_spec(path, "object"), articulation=None)
 
 
@@ -101,6 +109,46 @@ def make_robot_asset(backend: str, *, dataset_root: str | Path, mode: int = 15):
 
 Registry.instance().register("asset", "hdmi_object_asset", make_object_asset)
 Registry.instance().register("asset", "hdmi_robot_from_motion", make_robot_asset)
+
+
+def make_weave_robot_asset(backend: str, *, dataset_root: str | Path, mode: int = 15):
+    """Use the converted G1+Inspire model with the existing G1 body controller."""
+    if backend != "mjlab":
+        raise NotImplementedError("Weave combined assets currently require MjLab")
+    import copy
+    import mujoco
+    from mjlab.actuator import BuiltinPositionActuatorCfg
+
+    asset = make_robot_asset(backend, dataset_root=dataset_root, mode=mode)
+    model = asset.config.spec_fn().compile()
+    joints = [model.joint(i).name for i in range(model.njnt)
+              if model.jnt_type[i] != mujoco.mjtJoint.mjJNT_FREE]
+    if len(joints) != 53:
+        raise ValueError(f"G1+Inspire requires 53 movable joints, got {len(joints)}")
+    asset.config.joint_names_simulation = joints
+    asset.config.body_names_simulation = [model.body(i).name for i in range(1, model.nbody)]
+    joint_mapping = copy.deepcopy(asset.config.joint_symmetry_mapping)
+    body_mapping = copy.deepcopy(asset.config.spatial_symmetry_mapping)
+    for name in joints:
+        if name.startswith(("L_", "R_")):
+            other = ("R_" if name.startswith("L_") else "L_") + name[2:]
+            joint_mapping[name] = (1, other)
+    for name in asset.config.body_names_simulation:
+        if name.startswith(("L_", "R_")):
+            body_mapping[name] = ("R_" if name.startswith("L_") else "L_") + name[2:]
+        elif name not in body_mapping:
+            body_mapping[name] = name
+    asset.config.joint_symmetry_mapping = joint_mapping
+    asset.config.spatial_symmetry_mapping = body_mapping
+    asset.config.articulation.actuators = (*asset.config.articulation.actuators,
+        BuiltinPositionActuatorCfg(
+            target_names_expr=("[LR]_.*_joint",), effort_limit=1.0,
+            stiffness=5.0, damping=0.5, armature=0.01, frictionloss=0.0,
+        ))
+    return asset
+
+
+Registry.instance().register("asset", "hdmi_weave_robot_from_motion", make_weave_robot_asset)
 
 
 def _surface_points(path: Path) -> np.ndarray:
@@ -131,7 +179,8 @@ def _surface_points(path: Path) -> np.ndarray:
 
 def make_object_mesh_variants(backend: str, *,
                               motion_cfgs: Mapping[str, Mapping[str, object]],
-                              seed: int):
+                              seed: int,
+                              initial_pos: tuple[float, float, float] = (0.0, 0.0, 0.0)):
     """Load prebuilt variants; assign objects and sample visual points online."""
     if backend != "mjlab":
         raise NotImplementedError("Object mesh variants currently require MjLab")
@@ -141,7 +190,7 @@ def make_object_mesh_variants(backend: str, *,
     names = tuple(motion_cfgs)
     if not names:
         raise ValueError("motion_cfgs must contain at least one object dataset")
-    variants, surface_points, masses, weights = {}, {}, {}, []
+    variants, surface_points, masses, object_names, weights = {}, {}, {}, {}, []
     for name, cfg in motion_cfgs.items():
         path = cfg.get("path")
         if not isinstance(path, (str, Path)):
@@ -150,6 +199,8 @@ def make_object_mesh_variants(backend: str, *,
         if not np.isfinite(weight) or weight <= 0:
             raise ValueError(f"motion_cfgs[{name!r}].weight must be positive")
         xml = _dataset_xml(path)
+        metadata = json.loads((_resolve_dataset_root(path) / "manifest.json").read_text())
+        object_names[name] = str(metadata.get("object_name", name))
         variants[name] = lambda xml=xml: _subtree_spec(xml, "object")
         surface_points[name] = _surface_points(xml)
         masses[name] = float(variants[name]().compile().body("object").mass[0])
@@ -166,12 +217,15 @@ def make_object_mesh_variants(backend: str, *,
     class ObjectVariantCfg(VariantEntityCfg):
         surface_points: dict[str, np.ndarray] = field(default_factory=dict)
         variant_masses: dict[str, float] = field(default_factory=dict)
+        object_names: dict[str, str] = field(default_factory=dict)
 
     return ObjectVariantCfg(
+        init_state=ObjectVariantCfg.InitialStateCfg(pos=tuple(initial_pos)),
         variants=variants,
         assignment=assignment,
         surface_points=surface_points,
         variant_masses={name: float(masses[name]) for name in names},
+        object_names=object_names,
     )
 
 

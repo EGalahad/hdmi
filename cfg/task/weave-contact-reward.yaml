@@ -1,0 +1,17 @@
+# @package task
+defaults:
+  - weave-contact-observations
+  - _self_
+
+name: G1InspireTrackHDMIWeaveContactReward
+
+# Reward-only ablation: reuse the object-filtered sensor and both actor inputs.
+# Keep the baseline termination unchanged.
+reward:
+  object_tracking:
+    contact:
+      _target_: hdmi.contact_matching
+      weight: 2.0
+      sensor_name: robot_object_contact
+      body_names: '[LR]_(thumb_(intermediate|distal)|(index|middle|ring|pinky)_intermediate)'
+      saturate_force: 5.0

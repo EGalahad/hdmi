@@ -1,0 +1,30 @@
+# @package task
+
+robot:
+  name: hdmi_weave_robot_from_motion
+  dataset_root: ${task.command.motion_cfgs.largebox.path}
+  mode: 15
+
+objects:
+  object:
+    _target_: hdmi_object_mesh_variants
+    motion_cfgs: ${task.command.motion_cfgs}
+    seed: ${seed}
+    initial_pos: [3.0, 0.0, 3.0]
+
+command:
+  object_name: object
+  object_root_body_name: object
+  object_tracking_body_names: [object]
+  object_tracking_joint_names: []
+
+observation:
+  object_pcd:
+    surface_points:
+      _target_: hdmi.object_surface_points_local
+  object_category:
+    category:
+      _target_: hdmi.object_category
+  object_motion_progress:
+    progress:
+      _target_: hdmi.object_motion_progress
