@@ -172,6 +172,7 @@ class PPOConfig:
     kl_lr_high_threshold_ratio: float = 2.0
     epoch_kl_early_stop: bool = False
     opt: str = "muon"
+    muon_graph: bool = True
     compile: bool = False
     compile_rollout: bool = False
     compile_train_modules: bool = False
@@ -372,6 +373,10 @@ class PPOPolicy(PPOBase):
         # rollout stage; deploy/export freezes the ordinary VecNorm forward.
         cfg.pop("freeze_vecnorm", None)
         self.cfg = PPOConfig(**cfg)
+        if self.cfg.muon_graph and self.cfg.opt == "muon":
+            from .muon_graph import install
+
+            install()
         self.device = device
         self.observation_spec = observation_spec
         total_iters = float(getattr(env.cfg, "total_iters", 1))
@@ -873,8 +878,6 @@ class PPOPolicy(PPOBase):
             if residual_alpha is not None:
                 info["actor/alpha"] = residual_alpha
 
-        if torch.device(self.device).type == "cuda":
-            torch.cuda.empty_cache()
         return info
 
     def _get_actor_std(self, actor_module):
